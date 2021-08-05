@@ -7,6 +7,7 @@ from sklearn.metrics import roc_curve, precision_recall_curve, auc
 from utils import *
 import warnings
 warnings.filterwarnings("ignore")
+from progress_logger import ProgressLogger
 
 
 class SegmentationEvaluationMetrics:
@@ -91,7 +92,7 @@ def get_conf_mat(prediction, groundtruth):
     return FP, FN, TP, TN
 
 
-def get_evaluation_metrics(epoch, dataloader, segmentor, DEVICE, writer=None, SAVE_SEGS=False, COLOR=True,
+def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=None, SAVE_SEGS=False, COLOR=True,
                            N_EPOCHS_SAVE=10, folder=""):
 
     save_folder = os.path.join(folder, f"epoch_{epoch}")
@@ -119,6 +120,8 @@ def get_evaluation_metrics(epoch, dataloader, segmentor, DEVICE, writer=None, SA
     hausdorf_errors = []
 
     segmentor.eval()
+
+    logger.initialize_val_bar()
 
     with torch.no_grad():
 
@@ -186,7 +189,6 @@ def get_evaluation_metrics(epoch, dataloader, segmentor, DEVICE, writer=None, SA
                     opencv_image = opencv_image[:, :, ::-1].copy()
                     opencv_gt = np.array(mask_save)
                     opencv_segmentation = np.array(segmentation_save)
-                    #opencv_segmentation = np.where(opencv_segmentation > 0.5, 1.0, 0.0)
 
                     if not COLOR:
                         img = np.vstack(
@@ -203,6 +205,7 @@ def get_evaluation_metrics(epoch, dataloader, segmentor, DEVICE, writer=None, SA
 
                         cv2.imwrite(os.path.join(save_folder, f"{name}.png"), opencv_image)
 
+            logger.update_bar()
 
         ccrs = np.array(ccrs)[~np.isnan(np.array(ccrs))]
         precisions = np.array(precisions)[~np.isnan(np.array(precisions))]

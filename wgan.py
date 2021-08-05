@@ -9,6 +9,10 @@ import time
 from dataset_handler import DataSet
 import numpy as np
 from segmentation_metrics import get_evaluation_metrics
+import random
+import imgaug
+from progress_logger import ProgressLogger
+
 
 class WGAN:
 
@@ -27,11 +31,21 @@ class WGAN:
         self.PRETRAINED_WEIGHTS = parameter_dict["pretained_weights"]
         self.PRETRAINED_WEIGHTS_PATH = parameter_dict["pretained_weights_path"]
 
+        if not os.path.isdir(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH)):
+            os.mkdir(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH))
+
+        self.GENERATOR_WEIGHTS_FILE = parameter_dict["generator_weights_file"]
+        self.CRITIC_WEIGHTS_FILE = parameter_dict["critic_weights_file"]
+
         self.OPTIMIZER = parameter_dict["optimizer"]
 
         self.LOG_FILE = parameter_dict["log_file"]
 
+        self.set_random_seed(parameter_dict["random_seed"])
+
         self.dataset = dataset
+
+        self.logger = ProgressLogger(len(self.dataset.trainset_loader), len(self.dataset.valset_loader))
 
         if writer is not None:
             if not os.path.isdir(os.path.join(root_dir, writer)):
@@ -55,10 +69,7 @@ class WGAN:
         self.critic.init_weights()
 
         if self.PRETRAINED_WEIGHTS:
-            self.generator.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
-                                                                   "generator_weights")))
-            self.critic.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
-                                                                       "critic_weights")))
+            self.load_weights()
 
         if self.OPTIMIZER == "Adam":
             pass
@@ -73,10 +84,13 @@ class WGAN:
         for epoch in range(self.INITIAL_EPOCH, self.INITIAL_EPOCH+self.N_EPOCHS):
 
             t_init = time.time()
-            print(f"Starting epoch {epoch}")
+            #print(f"Starting epoch {epoch}")
+            self.logger.print_epoch(epoch)
 
             G_losses = []
             C_losses = []
+
+            self.logger.initialize_train_bar()
 
             for i, batched_sample in enumerate(self.dataset.trainset_loader):
 
@@ -97,7 +111,7 @@ class WGAN:
                                                epoch * len(self.dataset.trainset_loader) + i)
                     forward_passed_batches = 0
 
-
+                self.logger.update_bar()
 
             t_end = time.time()
 
@@ -107,7 +121,11 @@ class WGAN:
 
             self.validation_step(epoch, np.mean(np.array(G_losses)), np.mean(np.array(C_losses)))
 
-            print("Epoch {} finished in {:.1f} seconds".format(epoch, t_end-t_init))
+            self.save_weights()
+
+            self.logger.finish_epoch()
+
+            #print("Epoch {} finished in {:.1f} seconds".format(epoch, t_end-t_init))
 
 
     def generator_step(self, images):
@@ -147,8 +165,8 @@ class WGAN:
 
     def validation_step(self, epoch, generator_loss, critic_loss):
 
-        metrics = get_evaluation_metrics(epoch, self.dataset.trainset_loader, self.generator, self.DEVICE, SAVE_SEGS=True,
-                                         writer=self.writer, COLOR=True, N_EPOCHS_SAVE=10,
+        metrics = get_evaluation_metrics(self.logger, epoch, self.dataset.trainset_loader, self.generator, self.DEVICE,
+                                         SAVE_SEGS=True, writer=self.writer, COLOR=True, N_EPOCHS_SAVE=10,
                                          folder=os.path.join(self.root_dir, "Samples"))
 
         with open(os.path.join(self.root_dir, self.LOG_FILE), 'a') as file:
@@ -189,6 +207,24 @@ class WGAN:
 
         return gradient_penalty
 
+    @staticmethod
+    def set_random_seed(random_seed):
+        random.seed(random_seed)
+        torch.manual_seed(random_seed)
+        imgaug.seed(random_seed)
+
+    def load_weights(self):
+        self.generator.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
+                                                               self.GENERATOR_WEIGHTS_FILE)))
+        self.critic.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
+                                                            self.CRITIC_WEIGHTS_FILE)))
+
+    def save_weights(self):
+        torch.save(self.generator.state_dict(), os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
+                                                             self.GENERATOR_WEIGHTS_FILE))
+        torch.save(self.critic.state_dict(), os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
+                                                          self.CRITIC_WEIGHTS_FILE))
+
 if __name__ == "__main__":
 
     DEVICE = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
@@ -201,7 +237,9 @@ if __name__ == "__main__":
         "n_critic": 5,
         "device": DEVICE,
         "pretained_weights": False,
-        "pretained_weights_path": "/fff",
+        "pretained_weights_path": "pretrained_weights",
+        "generator_weights_file": "generator_weights",
+        "critic_weights_file": "critic_weights",
         "optimizer": "RMSprop",
         "log_file": "execution_log.txt",
         "random_seed": 42
@@ -225,9 +263,9 @@ if __name__ == "__main__":
 
     TRAIN_DATA_DIR = "/workspace/shared_files/Dataset_BUSI_with_GT"
     TRAIN_DATA_ANNOTATIONS_FILE = "gan_train_bus_images.csv"
-    dataset = DataSet(TRAIN_DATA_DIR, TRAIN_DATA_ANNOTATIONS_FILE, TRAIN_DATA_ANNOTATIONS_FILE,
+    VAL_DATA_ANNOTATIONS_FILE = "gan_val_bus_images.csv"
+    dataset = DataSet(TRAIN_DATA_DIR, TRAIN_DATA_ANNOTATIONS_FILE, VAL_DATA_ANNOTATIONS_FILE,
                       TRAIN_DATA_ANNOTATIONS_FILE, transforms_dict, augmentation_dict, 16, 2)
 
     wgan = WGAN(root_dir, param_dict, dataset, writer="tensorboard")
-
     wgan.train()
