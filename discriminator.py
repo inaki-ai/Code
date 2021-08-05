@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision
+from utils import *
 
 
 class Critic(torch.nn.Module):
@@ -40,7 +41,8 @@ class Critic(torch.nn.Module):
         )
 
     def init_weights(self):
-        pass
+
+        self.apply(weights_init)
 
     def forward(self, x):
         x = self.main_module(x)

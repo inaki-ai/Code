@@ -25,7 +25,8 @@ class Set(torch.utils.data.Dataset):
         self.data = pd.read_csv(os.path.join(data_root_dir, csv_file))
         self.data_root_dir = data_root_dir
         self.transform = transform
-        self.augmentation_pipeline = augmentation_pipeline[self.id]
+
+        self.augmentation_pipeline = augmentation_pipeline
 
     def __len__(self):
         """
@@ -133,3 +134,26 @@ def load_dataset(parameter_dict, print_info=True):
         print(f"\tVal set: {len(dataset.valset_loader)} batches")
         print(f"\tTest set: {len(dataset.testset_loader)} batches")
         print("-----------------------------------------------------------------\n\n")
+
+    return dataset
+
+if __name__ == "__main__":
+    from image_transformations import load_img_transforms
+    from data_augmentation import load_data_augmentation_pipes
+
+    DEVICE = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+
+    transforms_dict = load_img_transforms()
+    augmentation_dict = load_data_augmentation_pipes()
+
+    dataset_param_dict = {
+        "data_root_dir": "/workspace/shared_files/Dataset_BUSI_with_GT",
+        "train_csv_file": "gan_train_bus_images.csv",
+        "val_csv_file": "gan_val_bus_images.csv",
+        "test_csv_file": "gan_val_bus_images.csv",
+        "transforms": transforms_dict,
+        "augmentation_pipelines": augmentation_dict,
+        "batchsize": 16,
+        "workers": 9
+    }
+    dataset = load_dataset(dataset_param_dict)

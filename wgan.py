@@ -3,8 +3,6 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 import torch.optim as optim
 from utils import *
-import time
-from dataset_handler import load_dataset
 import numpy as np
 from segmentation_metrics import get_evaluation_metrics
 import random
@@ -12,6 +10,7 @@ import imgaug
 from progress_logger import ProgressLogger
 from rdau_net import RDAU_NET
 from discriminator import Critic
+from segmentation_metrics import get_evaluation_metrics
 
 
 class WGAN:
@@ -27,6 +26,7 @@ class WGAN:
         self.INITIAL_EPOCH = parameter_dict["initial_epoch"]
         self.GENERATOR_LEARNING_RATE = parameter_dict["generator_lr"]
         self.CRITIC_LEARNING_RATE = parameter_dict["critic_lr"]
+        self.ADAPTATIVE_LEARNING_RATE = parameter_dict["adaptative_lr"]
         self.N_CRITIC = parameter_dict["n_critic"]
 
         self.GENERATOR_TYPE = parameter_dict["generator"]
@@ -134,6 +134,10 @@ class WGAN:
 
             self.validation_step(epoch, np.mean(np.array(G_losses)), np.mean(np.array(C_losses)))
             self.save_weights()
+
+            if self.ADAPTATIVE_LEARNING_RATE:
+                self.update_learning_rate(epoch)
+
             self.logger.finish_epoch()
 
 
@@ -235,6 +239,36 @@ class WGAN:
                                                              self.GENERATOR_WEIGHTS_FILE))
         torch.save(self.critic.state_dict(), os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
                                                           self.CRITIC_WEIGHTS_FILE))
+
+    def update_learning_rate(self, epoch):
+
+        self.GENERATOR_LEARNING_RATE = self.GENERATOR_LEARNING_RATE * (0.1 ** (epoch // 30))
+        for param_group in self.optimizerG.param_groups:
+            param_group['lr'] = self.GENERATOR_LEARNING_RATE
+
+        self.CRITIC_LEARNING_RATE = self.CRITIC_LEARNING_RATE * (0.1 ** (epoch // 30))
+        for param_group in self.optimizerC.param_groups:
+            param_group['lr'] = self.CRITIC_LEARNING_RATE
+
+    def test_segmenter(self):
+
+        metrics = get_evaluation_metrics(self.logger, 0, self.dataset.testset_loader, self.generator, self.DEVICE,
+                                         writer=None, SAVE_SEGS=False, COLOR=True, N_EPOCHS_SAVE=10, folder="")
+
+        print("----------------------------------------------------------------------------")
+        print("EVALUTAION RESULTS:")
+        print("\tCCR: {:.4f}".format(metrics.CCR))
+        print("\tPrecision: {:.4f}".format(metrics.precision))
+        print("\tRecall: {:.4f}".format(metrics.recall))
+        print("\tSensibility: {:.4f}".format(metrics.sensibility))
+        print("\tSpecifity: {:.4f}".format(metrics.specifity))
+        print("\tF1 score: {:.4f}".format(metrics.f1_score))
+        print("\tJaccard coef: {:.4f}".format(metrics.jaccard))
+        print("\tDSC coef: {:.4f}".format(metrics.dice))
+        print("\tROC-AUC: {:.4f}".format(metrics.roc_auc))
+        print("\tPrecision-recall AUC: {:.4f}".format(metrics.precision_recall_auc))
+        print("\tHausdorf error: {:.4f}".format(metrics.hausdorf_error))
+        print("----------------------------------------------------------------------------")
 
 if __name__ == "__main__":
     pass

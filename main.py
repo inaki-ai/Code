@@ -6,17 +6,20 @@ from data_augmentation import load_data_augmentation_pipes
 import torch.backends.cudnn as cudnn
 cudnn.benchmark = True
 
+TRAIN = False
+
 """
 - PENDIENTE:
     ** Transformaciones (BN o COLOR)
-    * Data augmentation
+    ** Data augmentation
     * Generar el dataset (aunquesea el temporal sin BUSIS)
     * Revisar metricas y distancia de H
-    * Lr variable
+    ** Lr variable
     * revisar el merge (se puede probar a pasar la imagen mascarada o pasar solo la segmentacion)
     ** ADAM opt
-    * metodo test_inference (testset)
+    ** metodo test_inference (testset)
     * Descomentar linea 59 datasset_handler.py con los excel nuevos de datos
+    ** weights init de los modelos
 """
 
 def main():
@@ -29,9 +32,9 @@ def main():
 
     dataset_param_dict = {
         "data_root_dir": "/workspace/shared_files/Dataset_BUSI_with_GT",
-        "train_csv_file": "gan_train_bus_images",
-        "val_csv_file": "gan_val_bus_images",
-        "test_csv_file": "gan_val_bus_images",
+        "train_csv_file": "gan_train_bus_images.csv",
+        "val_csv_file": "gan_val_bus_images.csv",
+        "test_csv_file": "gan_val_bus_images.csv",
         "transforms": transforms_dict,
         "augmentation_pipelines": augmentation_dict,
         "batchsize": 16,
@@ -44,11 +47,12 @@ def main():
         "initial_epoch": 1,
         "generator_lr": 75e-4,
         "critic_lr": 75e-4,
+        "adaptative_lr": False,
         "n_critic": 5,
         "generator": "RDAU-NET",
         "critic": "Critic",
         "device": DEVICE,
-        "pretained_weights": False,
+        "pretained_weights": False or not TRAIN,
         "pretained_weights_path": "pretrained_weights",
         "generator_weights_file": "generator_weights",
         "critic_weights_file": "critic_weights",
@@ -57,7 +61,11 @@ def main():
         "random_seed": 42
     }
     wgan = WGAN(root_dir, wgan_param_dict, dataset, writer="tensorboard")
-    wgan.train()
+
+    if TRAIN:
+        wgan.train()
+    else:
+        wgan.test_segmenter()
 
 
 if __name__ == "__main__":

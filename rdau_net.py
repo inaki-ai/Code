@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision
+from utils import *
 
 
 class EncoderResidualUnit(nn.Module):
@@ -29,11 +30,11 @@ class EncoderResidualUnit(nn.Module):
         return self.sequence(x) + self.downsample(x)
 
 
-class DilationConvolutionsChain(nn.Module):
+class DilationConVolutionsChain(nn.Module):
 
     def __init__(self):
 
-        super(DilationConvolutionsChain, self).__init__()
+        super(DilationConVolutionsChain, self).__init__()
 
         self.dilated_conv1 = nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1, dilation=1, bias=False)
         self.dilated_conv2 = nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=2, dilation=2, bias=False)
@@ -120,7 +121,7 @@ class RDAU_NET(nn.Module):
         self.downsampling_conv5 = EncoderResidualUnit(in_channels=256, out_channels=512, stride=2)
         self.downsampling_conv6 = EncoderResidualUnit(in_channels=512, out_channels=512, stride=2)
 
-        self.dilated_conv_block = DilationConvolutionsChain()
+        self.dilated_conv_block = DilationConVolutionsChain()
 
         self.upsample_x2 = nn.Sequential(
             # Cambiar a upconv
@@ -146,7 +147,8 @@ class RDAU_NET(nn.Module):
         )
 
     def init_weights(self):
-        pass
+
+        self.apply(weights_init)
 
     def forward(self, x):
 
