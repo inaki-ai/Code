@@ -1,0 +1,269 @@
+import numpy as np
+import torch
+from torchvision import transforms
+import cv2
+import os
+from sklearn.metrics import roc_curve, precision_recall_curve, auc
+from utils import *
+import warnings
+warnings.filterwarnings("ignore")
+
+
+class SegmentationEvaluationMetrics:
+
+    def __init__(self, CCR, precision, recall, sensibility, specifity, f1_score,
+                 jaccard, dice, roc_auc, precision_recall_auc, hausdorf_error):
+        self.CCR = CCR
+        self.precision = precision
+        self.recall = recall
+        self.sensibility = sensibility
+        self.specifity = specifity
+        self.f1_score = f1_score
+        self.jaccard = jaccard
+        self.dice = dice
+        self.roc_auc = roc_auc
+        self.precision_recall_auc = precision_recall_auc
+        self.hausdorf_error = hausdorf_error
+
+
+def compute_jaccard_dice_coeffs(mask1, mask2):
+    """Calculates the dice coefficient for the images"""
+
+    mask1 = np.asarray(mask1).astype(np.bool)
+    mask2 = np.asarray(mask2).astype(np.bool)
+
+    if mask1.shape != mask2.shape:
+        raise ValueError("Shape mismatch: mask1 and mask2 must have the same shape.")
+
+    mask1 = mask1 > 0.5
+    mask2 = mask2 > 0.5
+
+    im_sum = mask1.sum() + mask2.sum()
+
+    if im_sum == 0:
+        return 1.0
+
+    # Compute Dice coefficient
+    intersection = np.logical_and(mask1, mask2).sum()
+    union = im_sum - intersection
+
+    return intersection / union, 2. * intersection / im_sum
+
+def compute_jaccard_coeff(mask1, im2):
+    """Calculates the jaccard coefficient for the images"""
+
+    mask1 = np.asarray(mask1).astype(np.bool)
+    im2 = np.asarray(im2).astype(np.bool)
+
+    if mask1.shape != im2.shape:
+        raise ValueError("Shape mismatch: im1 and im2 must have the same shape.")
+
+    mask1 = mask1 > 0.5
+    im2 = im2 > 0.5
+
+    im_sum = mask1.sum() + im2.sum()
+    if im_sum == 0:
+        return 1.0
+
+    # Compute Dice coefficient
+    intersection = np.logical_and(mask1, im2).sum()
+    union = im_sum - intersection
+    return intersection / union
+
+
+def get_conf_mat(prediction, groundtruth):
+    """Computes scores:
+    FP = False Positives
+    FN = False Negatives
+    TP = True Positives
+    TN = True Negatives
+    return: FP, FN, TP, TN"""
+
+    prediction = prediction > 0.5
+    groundtruth = groundtruth > 0.5
+
+    FP = np.float(np.sum((prediction == 1) & (groundtruth == 0)))
+    FN = np.float(np.sum((prediction == 0) & (groundtruth == 1)))
+    TP = np.float(np.sum((prediction == 1) & (groundtruth == 1)))
+    TN = np.float(np.sum((prediction == 0) & (groundtruth == 0)))
+
+
+    return FP, FN, TP, TN
+
+
+def get_evaluation_metrics(epoch, dataloader, segmentor, DEVICE, writer=None, SAVE_SEGS=False, COLOR=True,
+                           N_EPOCHS_SAVE=10, folder=""):
+
+    save_folder = os.path.join(folder, f"epoch_{epoch}")
+
+    if SAVE_SEGS and epoch % N_EPOCHS_SAVE == 0:
+        if not os.path.isdir(save_folder):
+          os.mkdir(save_folder)
+
+    ccrs = []
+
+    precisions = []
+    recalls = []
+
+    sensibilities = []
+    specifities = []
+
+    f1_scores = []
+
+    jaccard_coefs = []
+    dice_coeffs = []
+
+    roc_auc_coeffs = []
+    precision_recall_auc_coeffs = []
+
+    hausdorf_errors = []
+
+    segmentor.eval()
+
+    with torch.no_grad():
+
+        for i, batched_sample in enumerate(dataloader):
+
+            images, masks, filenames = batched_sample["image"].to(DEVICE), batched_sample["mask"].to(DEVICE), \
+                                     batched_sample["filename"]
+
+            segmentations = segmentor(images)
+            segmentations = torch.autograd.Variable((segmentations > 0.5).float())
+
+            trans = transforms.ToPILImage()
+
+            for j in range(images.shape[0]):
+                image, mask = images[j].to("cpu"), masks[j].to("cpu")
+                segmentation = segmentations[j].to("cpu")
+                name = filenames[j].split('/')[-1]
+
+                FP, FN, TP, TN = get_conf_mat(segmentation.numpy(), mask.numpy())
+
+                # print(f"FP = {FP}, FN = {FN}, TP = {TP}, TN = {TN}, TOTAL = {FP + FN + TP + TN}")
+
+                ccr = np.divide(TP + TN, FP + FN + TP + TN)
+
+                precision = np.divide(TP, TP + FP)
+                recall = np.divide(TP, TP + FN)
+
+                sensibility = np.divide(TP, TP + FN)
+                specifity = np.divide(TN, TN + FP)
+
+                f1_score = 2 * np.divide(precision * recall, precision + recall)
+
+                jaccard_coef, dice_coeff = compute_jaccard_dice_coeffs(segmentation.numpy(), mask.numpy())
+
+                mask_labels = mask.numpy().ravel().astype(np.int32)
+                segmentation_labels = segmentation.numpy().ravel()
+                fpr, tpr, _ = roc_curve(mask_labels, segmentation_labels)
+                roc_auc = auc(fpr,tpr)
+
+                precision_values, recall_values, _ = precision_recall_curve(mask_labels, segmentation_labels)
+                precision_recall_auc = auc(recall_values, precision_values)
+
+
+                hausdorf_error = 12.0
+
+                ccrs.append(ccr)
+                precisions.append(precision)
+                recalls.append(recall)
+                sensibilities.append(sensibility)
+                specifities.append(specifity)
+                f1_scores.append(f1_score)
+                jaccard_coefs.append(jaccard_coef)
+                dice_coeffs.append(dice_coeff)
+                roc_auc_coeffs.append(roc_auc)
+                precision_recall_auc_coeffs.append(precision_recall_auc)
+                hausdorf_errors.append(hausdorf_error)
+
+                if (SAVE_SEGS and epoch % N_EPOCHS_SAVE == 0):
+
+                    image_save = trans(image)
+                    mask_save = trans(mask)
+                    segmentation_save = trans(segmentation)
+
+                    opencv_image = np.array(image_save)
+                    opencv_image = opencv_image[:, :, ::-1].copy()
+                    opencv_gt = np.array(mask_save)
+                    opencv_segmentation = np.array(segmentation_save)
+                    #opencv_segmentation = np.where(opencv_segmentation > 0.5, 1.0, 0.0)
+
+                    if not COLOR:
+                        img = np.vstack(
+                          (cv2.cvtColor(opencv_image, cv2.COLOR_RGB2GRAY), opencv_gt, opencv_segmentation))
+                        cv2.imwrite(os.path.join(save_folder, f"{name}.png"), img)
+
+                    else:
+                        contours_gt, hierarchy = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                        contours_seg, hierarchy = cv2.findContours(opencv_segmentation, cv2.RETR_TREE,
+                                                                  cv2.CHAIN_APPROX_SIMPLE)
+
+                        cv2.drawContours(opencv_image, contours_gt, -1, (0, 255, 0), 1)
+                        cv2.drawContours(opencv_image, contours_seg, -1, (0, 0, 255), 1)
+
+                        cv2.imwrite(os.path.join(save_folder, f"{name}.png"), opencv_image)
+
+
+        ccrs = np.array(ccrs)[~np.isnan(np.array(ccrs))]
+        precisions = np.array(precisions)[~np.isnan(np.array(precisions))]
+        recalls = np.array(recalls)[~np.isnan(np.array(recalls))]
+        sensibilities = np.array(sensibilities)[~np.isnan(np.array(sensibilities))]
+        specifities = np.array(specifities)[~np.isnan(np.array(specifities))]
+        f1_scores = np.array(f1_scores)[~np.isnan(np.array(f1_scores))]
+        jaccard_coefs = np.array(jaccard_coefs)[~np.isnan(np.array(jaccard_coefs))]
+        dice_coeffs = np.array(dice_coeffs)[~np.isnan(np.array(dice_coeffs))]
+        roc_auc_coeffs = np.array(roc_auc_coeffs)[~np.isnan(np.array(roc_auc_coeffs))]
+        precision_recall_auc_coeffs = np.array(precision_recall_auc_coeffs)[~np.isnan(np.array(precision_recall_auc_coeffs))]
+        hausdorf_errors = np.array(hausdorf_errors)[~np.isnan(np.array(hausdorf_errors))]
+
+        mean_ccr = np.nansum(ccrs) / len(ccrs)
+        std_ccr = np.std(np.array(ccrs))
+
+        mean_precision = np.nansum(precisions) / len(precisions)
+        std_precision = np.std(np.array(precisions))
+
+        mean_recall = np.nansum(recalls) / len(recalls)
+        std_recall = np.std(np.array(recalls))
+
+        mean_sensibility = np.nansum(sensibilities) / len(sensibilities)
+        std_sensibility = np.std(np.array(sensibilities))
+
+        mean_specifity = np.nansum(specifities) / len(specifities)
+        std_specifity = np.std(np.array(specifities))
+
+        mean_f1_score = np.nansum(f1_scores) / len(f1_scores)
+        std_f1_score = np.std(np.array(f1_scores))
+
+        mean_jaccard_coef = np.nansum(jaccard_coefs) / len(jaccard_coefs)
+        std_jaccard_coef = np.std(np.array(jaccard_coefs))
+
+        mean_dice_coeff = np.nansum(dice_coeffs) / len(dice_coeffs)
+        std_dice_coeff = np.std(np.array(dice_coeffs))
+
+        mean_roc_auc = np.nansum(roc_auc_coeffs) / len(roc_auc_coeffs)
+        std_roc_auc = np.std(np.array(roc_auc_coeffs))
+
+        precision_recall_auc = np.nansum(precision_recall_auc_coeffs) / len(precision_recall_auc_coeffs)
+        std_roc_auc = np.std(np.array(precision_recall_auc_coeffs))
+
+        mean_hausdorf_error = np.nansum(hausdorf_errors) / len(hausdorf_errors)
+        std_hausdorf_error = np.std(np.array(hausdorf_errors))
+
+        segmentor.train()
+
+        if writer is not None:
+            writer.add_scalar("Metrics/ccr", mean_ccr, epoch)
+            writer.add_scalar("Metrics/precision", mean_precision, epoch)
+            writer.add_scalar("Metrics/recall", mean_recall, epoch)
+            writer.add_scalar("Metrics/sensibility", mean_sensibility, epoch)
+            writer.add_scalar("Metrics/specifity", mean_specifity, epoch)
+            writer.add_scalar("Metrics/f1 score", mean_f1_score, epoch)
+            writer.add_scalar("Metrics/jaccard idx", mean_jaccard_coef, epoch)
+            writer.add_scalar("Metrics/dice coeff", mean_dice_coeff, epoch)
+            writer.add_scalar("Metrics/roc-auc", mean_roc_auc, epoch)
+            writer.add_scalar("Metrics/precision recall auc", precision_recall_auc, epoch)
+            writer.add_scalar("Metrics/hausdorf error", mean_hausdorf_error, epoch)
+
+        return SegmentationEvaluationMetrics(mean_ccr, mean_precision, mean_recall,
+         mean_sensibility, mean_specifity, mean_f1_score, mean_jaccard_coef,
+         mean_dice_coeff, mean_roc_auc, precision_recall_auc, mean_hausdorf_error)
