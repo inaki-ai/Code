@@ -1,17 +1,17 @@
 import os
 from torch.utils.tensorboard import SummaryWriter
-from rdau_net import RDAU_NET
-from discriminator import Discriminator
 import torch
 import torch.optim as optim
 from utils import *
 import time
-from dataset_handler import DataSet
+from dataset_handler import load_dataset
 import numpy as np
 from segmentation_metrics import get_evaluation_metrics
 import random
 import imgaug
 from progress_logger import ProgressLogger
+from rdau_net import RDAU_NET
+from discriminator import Critic
 
 
 class WGAN:
@@ -20,11 +20,17 @@ class WGAN:
 
         self.root_dir = root_dir
 
+        if not os.path.isdir(self.root_dir):
+            raise (f"[E] Path {self.root_dir} does not exist")
+
         self.N_EPOCHS = parameter_dict["n_epochs"]
         self.INITIAL_EPOCH = parameter_dict["initial_epoch"]
         self.GENERATOR_LEARNING_RATE = parameter_dict["generator_lr"]
         self.CRITIC_LEARNING_RATE = parameter_dict["critic_lr"]
         self.N_CRITIC = parameter_dict["n_critic"]
+
+        self.GENERATOR_TYPE = parameter_dict["generator"]
+        self.CRITIC_TYPE = parameter_dict["critic"]
 
         self.DEVICE = parameter_dict["device"]
 
@@ -62,20 +68,31 @@ class WGAN:
 
     def init_wgan(self):
 
-        self.generator = RDAU_NET().to(self.DEVICE)
-        self.generator.init_weights()
+        if self.GENERATOR_TYPE == "RDAU-NET":
+            self.generator = RDAU_NET().to(self.DEVICE)
+        else:
+            raise (f"[E] No generator found: {self.GENERATOR_TYPE}")
 
-        self.critic = Discriminator().to(self.DEVICE)
+        if self.CRITIC_TYPE == "Critic":
+            self.critic = Critic().to(self.DEVICE)
+        else:
+            raise (f"[E] No critic found: {self.CRITIC_TYPE}")
+
+        self.generator.init_weights()
         self.critic.init_weights()
 
         if self.PRETRAINED_WEIGHTS:
             self.load_weights()
 
         if self.OPTIMIZER == "Adam":
-            pass
+            self.optimizerG = optim.Adam(self.generator.parameters(), lr=self.GENERATOR_LEARNING_RATE,
+                                         betas=(0.5, 0.999))
+            self.optimizerC = optim.Adam(self.critic.parameters(), lr=self.CRITIC_LEARNING_RATE, betas=(0.5, 0.999))
         elif self.OPTIMIZER == "RMSprop":
             self.optimizerG = optim.RMSprop(self.generator.parameters(), lr=self.GENERATOR_LEARNING_RATE)
             self.optimizerC = optim.RMSprop(self.critic.parameters(), lr=self.CRITIC_LEARNING_RATE)
+        else:
+            raise (f"[E] Optimizer {self.OPTIMIZER} not implemented")
 
 
     def train(self):
@@ -83,8 +100,6 @@ class WGAN:
         forward_passed_batches = 0
         for epoch in range(self.INITIAL_EPOCH, self.INITIAL_EPOCH+self.N_EPOCHS):
 
-            t_init = time.time()
-            #print(f"Starting epoch {epoch}")
             self.logger.print_epoch(epoch)
 
             G_losses = []
@@ -113,19 +128,13 @@ class WGAN:
 
                 self.logger.update_bar()
 
-            t_end = time.time()
-
             if self.writer is not None:
                 self.writer.add_scalar("Per epoch train loss/generator", np.mean(np.array(G_losses)), epoch)
                 self.writer.add_scalar("Per epoch train loss/discriminator", np.mean(np.array(C_losses)), epoch)
 
             self.validation_step(epoch, np.mean(np.array(G_losses)), np.mean(np.array(C_losses)))
-
             self.save_weights()
-
             self.logger.finish_epoch()
-
-            #print("Epoch {} finished in {:.1f} seconds".format(epoch, t_end-t_init))
 
 
     def generator_step(self, images):
@@ -149,12 +158,11 @@ class WGAN:
         images_with_masks = merge_images_with_masks(images, masks).to(self.DEVICE)
 
         segmentations = self.generator(images).detach()
-        #segmentations = torch.autograd.Variable((segmentations > 0.5).float(), requires_grad=True)
         images_with_segmentations = merge_images_with_masks(images, segmentations).to(self.DEVICE)
 
         loss_C = -torch.mean(self.critic(images_with_masks)) + torch.mean(self.critic(images_with_segmentations))
         _gradient_penalty = self.gradient_penalty(self.critic, images_with_masks, images_with_segmentations,
-                                                  10*2, self.DEVICE)
+                                                  10, self.DEVICE)
         loss_C += _gradient_penalty
 
         loss_C.backward()
@@ -165,7 +173,7 @@ class WGAN:
 
     def validation_step(self, epoch, generator_loss, critic_loss):
 
-        metrics = get_evaluation_metrics(self.logger, epoch, self.dataset.trainset_loader, self.generator, self.DEVICE,
+        metrics = get_evaluation_metrics(self.logger, epoch, self.dataset.valset_loader, self.generator, self.DEVICE,
                                          SAVE_SEGS=True, writer=self.writer, COLOR=True, N_EPOCHS_SAVE=10,
                                          folder=os.path.join(self.root_dir, "Samples"))
 
@@ -214,10 +222,13 @@ class WGAN:
         imgaug.seed(random_seed)
 
     def load_weights(self):
-        self.generator.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
-                                                               self.GENERATOR_WEIGHTS_FILE)))
-        self.critic.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
-                                                            self.CRITIC_WEIGHTS_FILE)))
+        try:
+            self.generator.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
+                                                                   self.GENERATOR_WEIGHTS_FILE)))
+            self.critic.load_state_dict(torch.load(os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
+                                                                self.CRITIC_WEIGHTS_FILE)))
+        except:
+            raise(f"[E] Pretrained weights do not exist at {os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH)}")
 
     def save_weights(self):
         torch.save(self.generator.state_dict(), os.path.join(self.root_dir, self.PRETRAINED_WEIGHTS_PATH,
@@ -226,46 +237,4 @@ class WGAN:
                                                           self.CRITIC_WEIGHTS_FILE))
 
 if __name__ == "__main__":
-
-    DEVICE = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-
-    param_dict = {
-        "n_epochs": 450,
-        "initial_epoch": 1,
-        "generator_lr": 5e-4,
-        "critic_lr": 5e-4,
-        "n_critic": 5,
-        "device": DEVICE,
-        "pretained_weights": False,
-        "pretained_weights_path": "pretrained_weights",
-        "generator_weights_file": "generator_weights",
-        "critic_weights_file": "critic_weights",
-        "optimizer": "RMSprop",
-        "log_file": "execution_log.txt",
-        "random_seed": 42
-    }
-
-    root_dir = "/workspace/shared_files/TFM/Execution"
-
-    train_data_transform, val_data_transform = load_img_transforms()
-
-    transforms_dict = {
-        "train": train_data_transform,
-        "val": train_data_transform,
-        "test": train_data_transform
-    }
-
-    augmentation_dict = {
-        "train": None,
-        "val": None,
-        "test": None
-    }
-
-    TRAIN_DATA_DIR = "/workspace/shared_files/Dataset_BUSI_with_GT"
-    TRAIN_DATA_ANNOTATIONS_FILE = "gan_train_bus_images.csv"
-    VAL_DATA_ANNOTATIONS_FILE = "gan_val_bus_images.csv"
-    dataset = DataSet(TRAIN_DATA_DIR, TRAIN_DATA_ANNOTATIONS_FILE, VAL_DATA_ANNOTATIONS_FILE,
-                      TRAIN_DATA_ANNOTATIONS_FILE, transforms_dict, augmentation_dict, 16, 2)
-
-    wgan = WGAN(root_dir, param_dict, dataset, writer="tensorboard")
-    wgan.train()
+    pass

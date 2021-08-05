@@ -142,7 +142,7 @@ class RDAU_NET(nn.Module):
 
         self.last_conv = nn.Sequential(
             nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.Sigmoid()
+            nn.Hardsigmoid()
         )
 
     def init_weights(self):

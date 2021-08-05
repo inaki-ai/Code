@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchvision
 
 
-class Discriminator(torch.nn.Module):
+class Critic(torch.nn.Module):
     def __init__(self):
         super().__init__()
 

@@ -1,6 +1,4 @@
 import torch
-from torchvision import transforms
-import PIL
 
 
 def merge_images_with_masks(images, masks):
@@ -23,19 +21,3 @@ def merge_images_with_masks(images, masks):
 
     return merged
 
-
-def load_img_transforms():
-
-    """
-    Funcion que carga las transformaciones
-
-    :return:
-    """
-    train_data_transform = transforms.Compose([
-        transforms.Resize((128, 128), interpolation=PIL.Image.NEAREST),
-        transforms.ToTensor()
-    ])
-
-    val_data_transform = train_data_transform
-
-    return train_data_transform, val_data_transform

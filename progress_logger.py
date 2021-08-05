@@ -30,11 +30,11 @@ class ProgressLogger:
         bar = self.get_updated_bar()
 
         if self.step > self.current_n_len:
-            print(f"222Step: {self.step}, N_len: {self.current_n_len}")
+            print()
         elif self.step == self.current_n_len:
             print("{} Step:{}/{} Elapsed time: {:.2f}s".format(bar, self.step, self.current_n_len, t1 - self.t0),
                   end='\r')
-            print(f"Step: {self.step}, N_len: {self.current_n_len}")
+            print()
         else:
             print("{} Step:{}/{} Elapsed time: {:.2f}s".format(bar, self.step, self.current_n_len, t1 - self.t0),
                   end='\r')
@@ -106,4 +106,4 @@ class ProgressLogger:
 
     @staticmethod
     def finish_epoch():
-        print("A")
+        print()

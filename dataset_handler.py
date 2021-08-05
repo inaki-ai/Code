@@ -25,7 +25,7 @@ class Set(torch.utils.data.Dataset):
         self.data = pd.read_csv(os.path.join(data_root_dir, csv_file))
         self.data_root_dir = data_root_dir
         self.transform = transform
-        self.augmentation_pipeline = augmentation_pipeline
+        self.augmentation_pipeline = augmentation_pipeline[self.id]
 
     def __len__(self):
         """
@@ -43,6 +43,7 @@ class Set(torch.utils.data.Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
+        # PIL images
         full_image_name = os.path.join(self.data_root_dir, self.data.iloc[idx, 0])
         image = Image.open(full_image_name).convert("RGB")
 
@@ -52,20 +53,18 @@ class Set(torch.utils.data.Dataset):
         if "malignant" in full_image_name:
           Class = "malignant"
         elif "benign" in full_image_name:
-          Class = "malignant"
+          Class = "benign"
         else:
           Class = "normal"
 
         filename = self.data.iloc[idx, 0]
 
-        if self.augmentation_pipeline:
-            image, ground_truth = self.augmentation_pipeline(np.array(image), np.array(ground_truth))
-
-            image = Image.fromarray(image)
-            ground_truth = Image.fromarray(ground_truth.draw(size=ground_truth.shape)[0]).convert('L')
-        else:
+        if self.augmentation_pipeline is not None:
             pass
+            #TODO
 
+
+        # Must be PIL images
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
@@ -83,8 +82,6 @@ class Set(torch.utils.data.Dataset):
 
 
 class DataSet():
-
-    #transforms = [train_trans, val_trans, test_trans, idem augmentation]
 
     def __init__(self, data_root_dir, train_csv_file, val_csv_file, test_csv_file, transforms, augmentation_pipelines,
                  batchsize, workers):
@@ -106,10 +103,33 @@ class DataSet():
         self.testset_loader = torch.utils.data.DataLoader(self.testset, batch_size=batchsize, shuffle=True,
                                                           num_workers=workers)
 
-        print(f"Train set length: {len(self.trainset)}")
-        print(f"Val set length: {len(self.valset)}")
-        print(f"Test set length: {len(self.testset)}")
+
+def load_dataset(parameter_dict, print_info=True):
+
+    data_root_dir = parameter_dict["data_root_dir"]
+
+    train_csv_file = parameter_dict["train_csv_file"]
+    val_csv_file = parameter_dict["val_csv_file"]
+    test_csv_file = parameter_dict["test_csv_file"]
+
+    transforms = parameter_dict["transforms"]
+    augmentation_pipelines = parameter_dict["augmentation_pipelines"]
+
+    batchsize = parameter_dict["batchsize"]
+
+    workers = parameter_dict["workers"]
+
+    dataset = DataSet(data_root_dir, train_csv_file, val_csv_file, test_csv_file, transforms,
+                      augmentation_pipelines, batchsize, workers)
+
+    if print_info:
+        print("-----------------------------------------------------------------")
+        print("###### DATASET INFO: #####")
+        print(f"Train set length: {len(dataset.trainset)} images")
+        print(f"Val set length: {len(dataset.valset)} images")
+        print(f"Test set length: {len(dataset.testset)} images\n")
         print("Mini-batches size:")
-        print(f"\tTrain set: {len(self.trainset_loader)}")
-        print(f"\tVal set: {len(self.valset_loader)}")
-        print(f"\tTest set: {len(self.testset_loader)}")
+        print(f"\tTrain set: {len(dataset.trainset_loader)} batches")
+        print(f"\tVal set: {len(dataset.valset_loader)} batches")
+        print(f"\tTest set: {len(dataset.testset_loader)} batches")
+        print("-----------------------------------------------------------------\n\n")
