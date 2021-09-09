@@ -8,6 +8,7 @@ from utils import *
 import warnings
 warnings.filterwarnings("ignore")
 from progress_logger import ProgressLogger
+from hausdorff import hausdorff_distance
 
 
 class SegmentationEvaluationMetrics:
@@ -30,6 +31,7 @@ class SegmentationEvaluationMetrics:
 def compute_jaccard_dice_coeffs(mask1, mask2):
     """Calculates the dice coefficient for the images"""
 
+
     mask1 = np.asarray(mask1).astype(np.bool)
     mask2 = np.asarray(mask2).astype(np.bool)
 
@@ -42,34 +44,27 @@ def compute_jaccard_dice_coeffs(mask1, mask2):
     im_sum = mask1.sum() + mask2.sum()
 
     if im_sum == 0:
-        return 1.0
+        return 1.0, 1.0
 
-    # Compute Dice coefficient
     intersection = np.logical_and(mask1, mask2).sum()
     union = im_sum - intersection
 
     return intersection / union, 2. * intersection / im_sum
 
-def compute_jaccard_coeff(mask1, im2):
+def compute_hausdorff_dist(im1, im2):
     """Calculates the jaccard coefficient for the images"""
 
-    mask1 = np.asarray(mask1).astype(np.bool)
-    im2 = np.asarray(im2).astype(np.bool)
+    im1 = np.asarray(im1).astype(np.int32)
+    im2 = np.asarray(im2).astype(np.int32)
 
-    if mask1.shape != im2.shape:
+    im1 = im1.reshape(im1.shape[1], im1.shape[2])
+    im2 = im2.reshape(im2.shape[1], im2.shape[2])
+
+    if im1.shape != im2.shape:
         raise ValueError("Shape mismatch: im1 and im2 must have the same shape.")
 
-    mask1 = mask1 > 0.5
-    im2 = im2 > 0.5
-
-    im_sum = mask1.sum() + im2.sum()
-    if im_sum == 0:
-        return 1.0
-
-    # Compute Dice coefficient
-    intersection = np.logical_and(mask1, im2).sum()
-    union = im_sum - intersection
-    return intersection / union
+    distance = hausdorff_distance(im1, im2, distance="euclidean")
+    return distance
 
 
 def get_conf_mat(prediction, groundtruth):
@@ -95,11 +90,15 @@ def get_conf_mat(prediction, groundtruth):
 def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=None, SAVE_SEGS=False, COLOR=True,
                            N_EPOCHS_SAVE=10, folder=""):
 
-    save_folder = os.path.join(folder, f"epoch_{epoch}")
+    if not epoch == -1:
+        save_folder = os.path.join(folder, f"epoch_{epoch}")
+    else:
+        save_folder = folder
 
-    if SAVE_SEGS and epoch % N_EPOCHS_SAVE == 0:
+    if SAVE_SEGS and (epoch % N_EPOCHS_SAVE == 0 or epoch == -1):
         if not os.path.isdir(save_folder):
-          os.mkdir(save_folder)
+            os.mkdir(save_folder)
+
 
     ccrs = []
 
@@ -164,8 +163,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                 precision_values, recall_values, _ = precision_recall_curve(mask_labels, segmentation_labels)
                 precision_recall_auc = auc(recall_values, precision_values)
 
-
-                hausdorf_error = 12.0
+                hausdorf_error = compute_hausdorff_dist(segmentation.numpy(), mask.numpy())
 
                 ccrs.append(ccr)
                 precisions.append(precision)
@@ -179,7 +177,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                 precision_recall_auc_coeffs.append(precision_recall_auc)
                 hausdorf_errors.append(hausdorf_error)
 
-                if (SAVE_SEGS and epoch % N_EPOCHS_SAVE == 0):
+                if SAVE_SEGS and (epoch % N_EPOCHS_SAVE == 0 or epoch == -1):
 
                     image_save = trans(image)
                     mask_save = trans(mask)
@@ -196,6 +194,16 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         cv2.imwrite(os.path.join(save_folder, f"{name}.png"), img)
 
                     else:
+                        """
+                        opencv_image = cv2.resize(opencv_image, (512, 512))
+
+                        opencv_gt = cv2.resize(opencv_gt, (512, 512))
+                        opencv_gt = (opencv_gt > 0.5).astype(np.float32)
+
+                        opencv_segmentation = cv2.resize(opencv_segmentation, (512, 512))
+                        opencv_segmentation = (opencv_segmentation > 0.5).astype(np.float32)
+                        """
+
                         contours_gt, hierarchy = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                         contours_seg, hierarchy = cv2.findContours(opencv_segmentation, cv2.RETR_TREE,
                                                                   cv2.CHAIN_APPROX_SIMPLE)
@@ -203,7 +211,9 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         cv2.drawContours(opencv_image, contours_gt, -1, (0, 255, 0), 1)
                         cv2.drawContours(opencv_image, contours_seg, -1, (0, 0, 255), 1)
 
-                        cv2.imwrite(os.path.join(save_folder, f"{name}.png"), opencv_image)
+                        opencv_image = cv2.resize(opencv_image, (512, 512))
+
+                        cv2.imwrite(os.path.join(save_folder, f"{name}"), opencv_image)
 
             logger.update_bar()
 

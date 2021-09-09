@@ -3,6 +3,7 @@ import torch
 import os
 import pandas as pd
 import numpy as np
+from torchvision import transforms
 
 
 class Set(torch.utils.data.Dataset):
@@ -60,20 +61,19 @@ class Set(torch.utils.data.Dataset):
 
         filename = self.data.iloc[idx, 0]
 
-        if self.augmentation_pipeline is not None:
-            pass
-            #TODO
-
-
         # Must be PIL images
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
 
+        if self.augmentation_pipeline is not None:
+            image, mask = self.augmentation_pipeline(image, mask)
+
+        to_tensor = transforms.ToTensor()
 
         sample = {
-          "image": image,
-          "mask": mask,
+          "image": to_tensor(image),
+          "mask": to_tensor(mask),
           "class": Class,
           "filename": filename
         }

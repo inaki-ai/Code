@@ -5,12 +5,12 @@ from utils import *
 
 
 class Critic(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels):
         super().__init__()
 
         self.main_module = nn.Sequential(
             # Image (Cx128x128)
-            nn.Conv2d(in_channels=4, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(in_channels=in_channels, out_channels=128, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(num_features=128),
             nn.LeakyReLU(0.2, inplace=True),
 

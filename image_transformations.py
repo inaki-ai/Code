@@ -11,7 +11,7 @@ def load_img_transforms():
     """
     train_data_transform = transforms.Compose([
         transforms.Resize((128, 128), interpolation=PIL.Image.NEAREST),
-        transforms.ToTensor()
+        #transforms.ToTensor()
     ])
 
     val_data_transform = train_data_transform
