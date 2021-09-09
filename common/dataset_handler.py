@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 from torchvision import transforms
+import yaml
 
 
 class Set(torch.utils.data.Dataset):
@@ -14,7 +15,7 @@ class Set(torch.utils.data.Dataset):
     indexar (ej: dataset[i])
     """
 
-    def __init__(self, data_root_dir, csv_file, id, transform=None, augmentation_pipeline=None):
+    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk"):
         """
         En el constructor simplemente se almecenan los datos
 
@@ -23,9 +24,18 @@ class Set(torch.utils.data.Dataset):
         :param transform: transformacion a aplicar a las imagenes
         """
         self.id = id
-        self.data = pd.read_csv(os.path.join(data_root_dir, csv_file))
-        self.data_root_dir = data_root_dir
+        self.data = pd.read_csv(csv_file)
+
+        self.cache = cache
         self.transform = transform
+
+        if self.cache == "ram":
+            self.images = []
+            for idx in range(len(self.data)):
+                image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+                mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+
+                self.images.append((image, mask))
 
         self.augmentation_pipeline = augmentation_pipeline
 
@@ -45,16 +55,17 @@ class Set(torch.utils.data.Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
+
+        if self.cache == "ram":
+            image, mask = self.images[idx]
+        else:
         # PIL images
-        full_image_name = os.path.join(self.data_root_dir, self.data.iloc[idx, 0])
-        image = Image.open(full_image_name).convert("RGB")
+            image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+            mask = Image.open(self.data.iloc[idx, 1]).convert("L")
 
-        mask_image_name = os.path.join(self.data_root_dir, self.data.iloc[idx, 1])
-        mask = Image.open(mask_image_name).convert("L")
-
-        if "malignant" in full_image_name:
+        if "malignant" in self.data.iloc[idx, 0]:
           Class = "malignant"
-        elif "benign" in full_image_name:
+        elif "benign" in self.data.iloc[idx, 0]:
           Class = "benign"
         else:
           Class = "normal"
@@ -84,15 +95,17 @@ class Set(torch.utils.data.Dataset):
 
 class DataSet():
 
-    def __init__(self, data_root_dir, train_csv_file, val_csv_file, test_csv_file, transforms, augmentation_pipelines,
-                 batchsize, workers):
+    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache):
 
-        self.trainset = Set(data_root_dir, train_csv_file, "train", transforms["train"],
-                            augmentation_pipelines["train"])
-        self.valset = Set(data_root_dir, val_csv_file, "val", transforms["val"],
-                            augmentation_pipelines["val"])
-        self.testset = Set(data_root_dir, test_csv_file, "test", transforms["test"],
-                            augmentation_pipelines["test"])
+        file = open(dataset_file, 'r')
+        dataset_files = yaml.safe_load(file)
+
+        self.trainset = Set(dataset_files["train"], "train", transforms["train"],
+                            augmentation_pipelines["train"], cache)
+        self.valset = Set(dataset_files["val"], "val", transforms["val"],
+                            augmentation_pipelines["val"], cache)
+        self.testset = Set(dataset_files["test"], "test", transforms["test"],
+                            augmentation_pipelines["test"], cache)
 
         self.batchsize = batchsize
         self.workers = workers
@@ -107,32 +120,35 @@ class DataSet():
 
 def load_dataset(parameter_dict, print_info=True):
 
-    data_root_dir = parameter_dict["data_root_dir"]
-
-    train_csv_file = parameter_dict["train_csv_file"]
-    val_csv_file = parameter_dict["val_csv_file"]
-    test_csv_file = parameter_dict["test_csv_file"]
+    if print_info:
+        print("[I] Loading dataset")
 
     transforms = parameter_dict["transforms"]
     augmentation_pipelines = parameter_dict["augmentation_pipelines"]
 
-    batchsize = parameter_dict["batchsize"]
-
+    batchsize = parameter_dict["batch_size"]
     workers = parameter_dict["workers"]
 
-    dataset = DataSet(data_root_dir, train_csv_file, val_csv_file, test_csv_file, transforms,
-                      augmentation_pipelines, batchsize, workers)
+    cache = parameter_dict["cache"]
+
+    dataset_file = os.path.join("datasets", parameter_dict["dataset"])
+
+    if not os.path.isfile(dataset_file) and dataset_file.endswith('.yaml'):
+        raise Exception(f"Dataset file {dataset_file} does not exist")
+
+    dataset = DataSet(dataset_file, transforms,
+                      augmentation_pipelines, batchsize, workers, cache)
 
     if print_info:
         print("-----------------------------------------------------------------")
-        print("###### DATASET INFO: #####")
-        print(f"Train set length: {len(dataset.trainset)} images")
-        print(f"Val set length: {len(dataset.valset)} images")
-        print(f"Test set length: {len(dataset.testset)} images\n")
-        print("Mini-batches size:")
-        print(f"\tTrain set: {len(dataset.trainset_loader)} batches")
-        print(f"\tVal set: {len(dataset.valset_loader)} batches")
-        print(f"\tTest set: {len(dataset.testset_loader)} batches")
+        print("[I] DATASET INFO:")
+        print(f"\tTrain set length: {len(dataset.trainset)} images")
+        print(f"\tVal set length: {len(dataset.valset)} images")
+        print(f"\tTest set length: {len(dataset.testset)} images\n")
+        print("\n\tMini-batches size:")
+        print(f"\t\tTrain set: {len(dataset.trainset_loader)} batches")
+        print(f"\t\tVal set: {len(dataset.valset_loader)} batches")
+        print(f"\t\tTest set: {len(dataset.testset_loader)} batches")
         print("-----------------------------------------------------------------\n\n")
 
     return dataset
@@ -153,7 +169,7 @@ if __name__ == "__main__":
         "test_csv_file": "gan_val_bus_images.csv",
         "transforms": transforms_dict,
         "augmentation_pipelines": augmentation_dict,
-        "batchsize": 16,
+        "batch_size": 16,
         "workers": 9
     }
     dataset = load_dataset(dataset_param_dict)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision
-from utils import *
+from common.utils import *
 
 
 class EncoderResidualUnit(nn.Module):

@@ -1,0 +1,10 @@
+---
+net: UNet
+n_epochs: 50
+batch_size: 16
+learning_rate: 0.0001
+optimizer: Adam
+dataset: dataset1.yaml
+workers: 9
+cache: ram
+data_augmentation: True
