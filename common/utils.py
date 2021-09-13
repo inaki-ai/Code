@@ -39,3 +39,18 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+
+
+def torch_dice_loss(pred, target, smooth = 1., adapt_values=False):
+
+    pred = pred.contiguous()
+    target = target.contiguous()
+
+    if adapt_values:
+        pred[pred >= 0.5] = 1.0
+        pred[pred < 0.5] = 0.0
+
+    loss = (1 - ((2. * (pred * target).sum(dim=2).sum(dim=2) + smooth) / \
+            (pred.sum(dim=2).sum(dim=2) + target.sum(dim=2).sum(dim=2) + smooth)))
+
+    return loss.mean()
