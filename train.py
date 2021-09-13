@@ -1,4 +1,5 @@
 from trainers.unet_trainer import UnetTrainer
+import os
 
 
 def main():
@@ -11,5 +12,7 @@ if __name__ == '__main__':
 
     try:
         main()
+        os.system('chmod -R 777 .')
     except KeyboardInterrupt:
+        os.system('chmod -R 777 .')
         exit()

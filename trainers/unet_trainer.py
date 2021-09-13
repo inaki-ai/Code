@@ -1,4 +1,5 @@
 import time
+import os
 
 import torch
 import torch.nn as nn
@@ -7,12 +8,14 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
 
 from models.segmentors.unet import UNet
+from models.segmentors.rdau_net import RDAU_NET
 
 from common.hyperparameters import HyperparameterReader
 from common.dataset_handler import load_dataset
 from common.image_transformations import load_img_transforms
 from common.data_augmentation import load_data_augmentation_pipes
 from common.utils import torch_dice_loss
+from common.segmentation_metrics import get_evaluation_metrics
 
 
 class UnetTrainer:
@@ -35,6 +38,9 @@ class UnetTrainer:
         if self.parameter_dict["net"] == "UNet":
             self.model = UNet(3, 1).to(self.parameter_dict["device"])
             self.model.init_weights()
+        elif self.parameter_dict["net"] == "RDAUNet":
+            self.model = RDAU_NET().to(self.parameter_dict["device"])
+            self.model.init_weights()
         else:
             #TODO
             pass
@@ -46,8 +52,16 @@ class UnetTrainer:
             #TODO
             pass
 
+        self.experiment_folder = self.check_experiments_folder()
+
+        if self.parameter_dict["tensorboard"]:
+            self.tb_runs_folder = self.check_runs_folder(self.experiment_folder.split('/')[-1])
+            self.writer = SummaryWriter(f"{self.tb_runs_folder}")
+        else:
+            self.writer = None
+
     @staticmethod
-    def compute_loss(prediction, target, bce_weight=0.5):
+    def compute_loss(prediction, target, bce_weight=0.25):
 
         bce = F.binary_cross_entropy_with_logits(prediction, target)
 
@@ -105,12 +119,48 @@ class UnetTrainer:
 
     def train(self):
 
-        for epoch in range(self.parameter_dict["n_epochs"]):
+        for epoch in range(1, self.parameter_dict["n_epochs"]+1):
 
             train_loss = self.train_step()
             val_loss = self.val_step()
 
             print(f"Epoch: {epoch} -- Train loss: {train_loss} - Val loss: {val_loss}")
+
+            if self.writer is not None:
+                self.writer.add_scalars('Loss', {'Train': train_loss, 'Val': val_loss}, epoch)
+
+            metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.model,
+                                    self.parameter_dict["device"], writer=self.writer,
+                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations")
+
+
+    @staticmethod
+    def check_experiments_folder():
+        
+        if not os.path.isdir("experiments"):
+            os.mkdir("experiments")
+            os.mkdir("experiments/exp1")
+            return "experiments/exp1"
+        else:
+            numbers = [int(x.replace("exp", "")) for x in os.listdir("experiments")]
+            if len(numbers) > 0:
+                n_folder = max(numbers)+1
+            else:
+                n_folder = 1
+
+            os.mkdir(f"experiments/exp{n_folder}")
+            return f"experiments/exp{n_folder}"
+
+
+    @staticmethod
+    def check_runs_folder(exp_folder):
+        
+        if not os.path.isdir("runs"):
+            os.mkdir("runs")
+
+        os.mkdir(f"runs/{exp_folder}")
+        return f"runs/{exp_folder}/{exp_folder}"
+
 
 
 

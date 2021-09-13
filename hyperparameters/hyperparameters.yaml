@@ -1,10 +1,11 @@
 ---
-net: UNet
-n_epochs: 50
+net: RDAUNet # UNet, RDAUNet
+n_epochs: 3000
 batch_size: 16
-learning_rate: 0.01
+learning_rate: 0.0000075
 optimizer: Adam
 dataset: dataset1.yaml
 workers: 9
-cache: disk # ram or disk
+cache: ram # ram or disk
 data_augmentation: True
+tensorboard: True

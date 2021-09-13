@@ -4,10 +4,10 @@ from torchvision import transforms
 import cv2
 import os
 from sklearn.metrics import roc_curve, precision_recall_curve, auc
-from utils import *
+from common.utils import *
 import warnings
 warnings.filterwarnings("ignore")
-from progress_logger import ProgressLogger
+from common.progress_logger import ProgressLogger
 from hausdorff import hausdorff_distance
 
 
@@ -90,6 +90,9 @@ def get_conf_mat(prediction, groundtruth):
 def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=None, SAVE_SEGS=False, COLOR=True,
                            N_EPOCHS_SAVE=10, folder=""):
 
+    if not os.path.isdir(folder):
+        os.mkdir(folder)
+
     if not epoch == -1:
         save_folder = os.path.join(folder, f"epoch_{epoch}")
     else:
@@ -120,7 +123,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
     segmentor.eval()
 
-    logger.initialize_val_bar()
+    #logger.initialize_val_bar()
 
     with torch.no_grad():
 
@@ -215,7 +218,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
                         cv2.imwrite(os.path.join(save_folder, f"{name}"), opencv_image)
 
-            logger.update_bar()
+            #logger.update_bar()
 
         ccrs = np.array(ccrs)[~np.isnan(np.array(ccrs))]
         precisions = np.array(precisions)[~np.isnan(np.array(precisions))]
