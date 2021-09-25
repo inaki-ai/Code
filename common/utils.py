@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 
 def merge_images_with_masks(images, masks):
 
@@ -54,3 +55,28 @@ def torch_dice_loss(pred, target, smooth = 1., adapt_values=False):
             (pred.sum(dim=2).sum(dim=2) + target.sum(dim=2).sum(dim=2) + smooth)))
 
     return loss.mean()
+
+def check_experiments_folder():
+        
+    if not os.path.isdir("experiments"):
+        os.mkdir("experiments")
+        os.mkdir("experiments/exp1")
+        return "experiments/exp1"
+    else:
+        numbers = [int(x.replace("exp", "")) for x in os.listdir("experiments")]
+        if len(numbers) > 0:
+            n_folder = max(numbers)+1
+        else:
+            n_folder = 1
+
+        os.mkdir(f"experiments/exp{n_folder}")
+        return f"experiments/exp{n_folder}"
+
+
+def check_runs_folder(exp_folder):
+        
+    if not os.path.isdir("runs"):
+        os.mkdir("runs")
+
+    os.mkdir(f"runs/{exp_folder}")
+    return f"runs/{exp_folder}/{exp_folder}"

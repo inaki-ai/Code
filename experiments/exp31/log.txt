@@ -1,0 +1,225 @@
+2021-09-17 10:23:10: Reading hyperparameters from hyperparameters.yaml
+2021-09-17 10:23:10: Hyperparameters succesfully read:
+2021-09-17 10:23:10: 	net: RDAUNet
+2021-09-17 10:23:10: 	bilinear: True
+2021-09-17 10:23:10: 	n_epochs: 3000
+2021-09-17 10:23:10: 	batch_size: 16
+2021-09-17 10:23:10: 	learning_rate: 7.5e-05
+2021-09-17 10:23:10: 	optimizer: Adam
+2021-09-17 10:23:10: 	dataset: dataset2.yaml
+2021-09-17 10:23:10: 	workers: 9
+2021-09-17 10:23:10: 	cache: ram
+2021-09-17 10:23:10: 	data_augmentation: True
+2021-09-17 10:23:10: 	tensorboard: True
+2021-09-17 10:23:10: 	pretrained_weights: False
+2021-09-17 10:23:10: 	pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp8/weights/best.pt
+2021-09-17 10:23:10: 	random_seed: 42
+2021-09-17 10:23:10: Found device: cuda:0
+2021-09-17 10:23:10: Transforms dict load succesfully
+2021-09-17 10:23:10: Data augmentation dict load succesfully
+2021-09-17 10:23:18: Dataset load succesfully
+2021-09-17 10:23:19: Model RDAUNet load succesfully
+2021-09-17 10:23:19: Starting training the model...
+2021-09-17 10:23:19: Starting epoch 1
+2021-09-17 10:23:43: Epoch 1 finished -- Train loss: 0.6299 - Val loss: 0.6074 -- Elapsed time: 24.3s
+2021-09-17 10:23:47: Last weights saved at epoch 1
+2021-09-17 10:23:47: New best value of DSC reach: 0.3058 (last: -1.0000)
+2021-09-17 10:23:47: Best weights saved at epoch 1
+2021-09-17 10:23:47: Starting epoch 2
+2021-09-17 10:24:10: Epoch 2 finished -- Train loss: 0.4905 - Val loss: 0.4248 -- Elapsed time: 22.9s
+2021-09-17 10:24:13: Last weights saved at epoch 2
+2021-09-17 10:24:13: New best value of DSC reach: 0.6717 (last: 0.3058)
+2021-09-17 10:24:13: Best weights saved at epoch 2
+2021-09-17 10:24:13: Starting epoch 3
+2021-09-17 10:24:36: Epoch 3 finished -- Train loss: 0.3864 - Val loss: 0.3195 -- Elapsed time: 23.2s
+2021-09-17 10:24:39: Last weights saved at epoch 3
+2021-09-17 10:24:39: New best value of DSC reach: 0.7015 (last: 0.6717)
+2021-09-17 10:24:39: Best weights saved at epoch 3
+2021-09-17 10:24:39: Starting epoch 4
+2021-09-17 10:25:02: Epoch 4 finished -- Train loss: 0.3047 - Val loss: 0.2643 -- Elapsed time: 23.1s
+2021-09-17 10:25:05: Last weights saved at epoch 4
+2021-09-17 10:25:05: New best value of DSC reach: 0.7293 (last: 0.7015)
+2021-09-17 10:25:05: Best weights saved at epoch 4
+2021-09-17 10:25:05: Starting epoch 5
+2021-09-17 10:25:28: Epoch 5 finished -- Train loss: 0.2668 - Val loss: 0.2460 -- Elapsed time: 23.2s
+2021-09-17 10:25:34: Last weights saved at epoch 5
+2021-09-17 10:25:34: Starting epoch 6
+2021-09-17 10:25:56: Epoch 6 finished -- Train loss: 0.2420 - Val loss: 0.2251 -- Elapsed time: 22.3s
+2021-09-17 10:25:59: Last weights saved at epoch 6
+2021-09-17 10:25:59: New best value of DSC reach: 0.7527 (last: 0.7293)
+2021-09-17 10:25:59: Best weights saved at epoch 6
+2021-09-17 10:25:59: Starting epoch 7
+2021-09-17 10:26:21: Epoch 7 finished -- Train loss: 0.2148 - Val loss: 0.2125 -- Elapsed time: 22.4s
+2021-09-17 10:26:24: Last weights saved at epoch 7
+2021-09-17 10:26:24: New best value of DSC reach: 0.7716 (last: 0.7527)
+2021-09-17 10:26:24: Best weights saved at epoch 7
+2021-09-17 10:26:24: Starting epoch 8
+2021-09-17 10:26:46: Epoch 8 finished -- Train loss: 0.1987 - Val loss: 0.1975 -- Elapsed time: 22.2s
+2021-09-17 10:26:49: Last weights saved at epoch 8
+2021-09-17 10:26:49: Starting epoch 9
+2021-09-17 10:27:12: Epoch 9 finished -- Train loss: 0.1903 - Val loss: 0.1726 -- Elapsed time: 22.5s
+2021-09-17 10:27:15: Last weights saved at epoch 9
+2021-09-17 10:27:15: New best value of DSC reach: 0.7974 (last: 0.7716)
+2021-09-17 10:27:15: Best weights saved at epoch 9
+2021-09-17 10:27:15: Starting epoch 10
+2021-09-17 10:27:37: Epoch 10 finished -- Train loss: 0.1844 - Val loss: 0.1838 -- Elapsed time: 22.4s
+2021-09-17 10:27:43: Last weights saved at epoch 10
+2021-09-17 10:27:43: Starting epoch 11
+2021-09-17 10:28:05: Epoch 11 finished -- Train loss: 0.1727 - Val loss: 0.1694 -- Elapsed time: 22.1s
+2021-09-17 10:28:08: Last weights saved at epoch 11
+2021-09-17 10:28:08: Starting epoch 12
+2021-09-17 10:28:30: Epoch 12 finished -- Train loss: 0.1679 - Val loss: 0.1546 -- Elapsed time: 22.3s
+2021-09-17 10:28:33: Last weights saved at epoch 12
+2021-09-17 10:28:33: New best value of DSC reach: 0.8163 (last: 0.7974)
+2021-09-17 10:28:33: Best weights saved at epoch 12
+2021-09-17 10:28:33: Starting epoch 13
+2021-09-17 10:28:56: Epoch 13 finished -- Train loss: 0.1552 - Val loss: 0.1639 -- Elapsed time: 22.6s
+2021-09-17 10:28:59: Last weights saved at epoch 13
+2021-09-17 10:28:59: Starting epoch 14
+2021-09-17 10:29:21: Epoch 14 finished -- Train loss: 0.1541 - Val loss: 0.1705 -- Elapsed time: 22.1s
+2021-09-17 10:29:24: Last weights saved at epoch 14
+2021-09-17 10:29:24: Starting epoch 15
+2021-09-17 10:29:46: Epoch 15 finished -- Train loss: 0.1484 - Val loss: 0.1617 -- Elapsed time: 22.3s
+2021-09-17 10:29:51: Last weights saved at epoch 15
+2021-09-17 10:29:51: Starting epoch 16
+2021-09-17 10:30:14: Epoch 16 finished -- Train loss: 0.1471 - Val loss: 0.1581 -- Elapsed time: 22.2s
+2021-09-17 10:30:16: Last weights saved at epoch 16
+2021-09-17 10:30:16: New best value of DSC reach: 0.8184 (last: 0.8163)
+2021-09-17 10:30:16: Best weights saved at epoch 16
+2021-09-17 10:30:16: Starting epoch 17
+2021-09-17 10:30:39: Epoch 17 finished -- Train loss: 0.1462 - Val loss: 0.1674 -- Elapsed time: 22.3s
+2021-09-17 10:30:41: Last weights saved at epoch 17
+2021-09-17 10:30:41: Starting epoch 18
+2021-09-17 10:31:04: Epoch 18 finished -- Train loss: 0.1407 - Val loss: 0.1650 -- Elapsed time: 22.3s
+2021-09-17 10:31:06: Last weights saved at epoch 18
+2021-09-17 10:31:06: Starting epoch 19
+2021-09-17 10:31:29: Epoch 19 finished -- Train loss: 0.1443 - Val loss: 0.1688 -- Elapsed time: 22.3s
+2021-09-17 10:31:32: Last weights saved at epoch 19
+2021-09-17 10:31:32: Starting epoch 20
+2021-09-17 10:31:54: Epoch 20 finished -- Train loss: 0.1413 - Val loss: 0.1538 -- Elapsed time: 22.2s
+2021-09-17 10:31:59: Last weights saved at epoch 20
+2021-09-17 10:31:59: Starting epoch 21
+2021-09-17 10:32:22: Epoch 21 finished -- Train loss: 0.1342 - Val loss: 0.1553 -- Elapsed time: 22.5s
+2021-09-17 10:32:25: Last weights saved at epoch 21
+2021-09-17 10:32:25: New best value of DSC reach: 0.8208 (last: 0.8184)
+2021-09-17 10:32:25: Best weights saved at epoch 21
+2021-09-17 10:32:25: Starting epoch 22
+2021-09-17 10:32:47: Epoch 22 finished -- Train loss: 0.1317 - Val loss: 0.1564 -- Elapsed time: 22.4s
+2021-09-17 10:32:50: Last weights saved at epoch 22
+2021-09-17 10:32:50: Starting epoch 23
+2021-09-17 10:33:12: Epoch 23 finished -- Train loss: 0.1329 - Val loss: 0.1660 -- Elapsed time: 22.5s
+2021-09-17 10:33:15: Last weights saved at epoch 23
+2021-09-17 10:33:15: Starting epoch 24
+2021-09-17 10:33:38: Epoch 24 finished -- Train loss: 0.1263 - Val loss: 0.1518 -- Elapsed time: 22.8s
+2021-09-17 10:33:41: Last weights saved at epoch 24
+2021-09-17 10:33:41: New best value of DSC reach: 0.8318 (last: 0.8208)
+2021-09-17 10:33:41: Best weights saved at epoch 24
+2021-09-17 10:33:41: Starting epoch 25
+2021-09-17 10:34:04: Epoch 25 finished -- Train loss: 0.1227 - Val loss: 0.1477 -- Elapsed time: 23.1s
+2021-09-17 10:34:09: Last weights saved at epoch 25
+2021-09-17 10:34:09: Starting epoch 26
+2021-09-17 10:34:32: Epoch 26 finished -- Train loss: 0.1193 - Val loss: 0.1642 -- Elapsed time: 22.5s
+2021-09-17 10:34:35: Last weights saved at epoch 26
+2021-09-17 10:34:35: Starting epoch 27
+2021-09-17 10:34:57: Epoch 27 finished -- Train loss: 0.1202 - Val loss: 0.1522 -- Elapsed time: 22.7s
+2021-09-17 10:35:00: Last weights saved at epoch 27
+2021-09-17 10:35:00: Starting epoch 28
+2021-09-17 10:35:22: Epoch 28 finished -- Train loss: 0.1201 - Val loss: 0.1503 -- Elapsed time: 22.3s
+2021-09-17 10:35:25: Last weights saved at epoch 28
+2021-09-17 10:35:25: New best value of DSC reach: 0.8338 (last: 0.8318)
+2021-09-17 10:35:25: Best weights saved at epoch 28
+2021-09-17 10:35:25: Starting epoch 29
+2021-09-17 10:35:48: Epoch 29 finished -- Train loss: 0.1187 - Val loss: 0.1582 -- Elapsed time: 22.3s
+2021-09-17 10:35:50: Last weights saved at epoch 29
+2021-09-17 10:35:50: Starting epoch 30
+2021-09-17 10:36:13: Epoch 30 finished -- Train loss: 0.1248 - Val loss: 0.1580 -- Elapsed time: 22.5s
+2021-09-17 10:36:18: Last weights saved at epoch 30
+2021-09-17 10:36:18: Starting epoch 31
+2021-09-17 10:36:41: Epoch 31 finished -- Train loss: 0.1158 - Val loss: 0.1509 -- Elapsed time: 22.4s
+2021-09-17 10:36:44: Last weights saved at epoch 31
+2021-09-17 10:36:44: Starting epoch 32
+2021-09-17 10:37:06: Epoch 32 finished -- Train loss: 0.1147 - Val loss: 0.1569 -- Elapsed time: 22.4s
+2021-09-17 10:37:09: Last weights saved at epoch 32
+2021-09-17 10:37:09: Starting epoch 33
+2021-09-17 10:37:31: Epoch 33 finished -- Train loss: 0.1125 - Val loss: 0.1595 -- Elapsed time: 22.4s
+2021-09-17 10:37:34: Last weights saved at epoch 33
+2021-09-17 10:37:34: Starting epoch 34
+2021-09-17 10:37:56: Epoch 34 finished -- Train loss: 0.1090 - Val loss: 0.1566 -- Elapsed time: 22.4s
+2021-09-17 10:37:59: Last weights saved at epoch 34
+2021-09-17 10:37:59: New best value of DSC reach: 0.8339 (last: 0.8338)
+2021-09-17 10:37:59: Best weights saved at epoch 34
+2021-09-17 10:37:59: Starting epoch 35
+2021-09-17 10:38:22: Epoch 35 finished -- Train loss: 0.1074 - Val loss: 0.1401 -- Elapsed time: 22.6s
+2021-09-17 10:38:28: Last weights saved at epoch 35
+2021-09-17 10:38:28: New best value of DSC reach: 0.8448 (last: 0.8339)
+2021-09-17 10:38:28: Best weights saved at epoch 35
+2021-09-17 10:38:28: Starting epoch 36
+2021-09-17 10:38:51: Epoch 36 finished -- Train loss: 0.1133 - Val loss: 0.1547 -- Elapsed time: 22.5s
+2021-09-17 10:38:53: Last weights saved at epoch 36
+2021-09-17 10:38:53: Starting epoch 37
+2021-09-17 10:39:16: Epoch 37 finished -- Train loss: 0.1067 - Val loss: 0.1477 -- Elapsed time: 22.5s
+2021-09-17 10:39:19: Last weights saved at epoch 37
+2021-09-17 10:39:19: Starting epoch 38
+2021-09-17 10:39:41: Epoch 38 finished -- Train loss: 0.1039 - Val loss: 0.1539 -- Elapsed time: 22.1s
+2021-09-17 10:39:44: Last weights saved at epoch 38
+2021-09-17 10:39:44: Starting epoch 39
+2021-09-17 10:40:06: Epoch 39 finished -- Train loss: 0.1040 - Val loss: 0.1502 -- Elapsed time: 22.5s
+2021-09-17 10:40:09: Last weights saved at epoch 39
+2021-09-17 10:40:09: Starting epoch 40
+2021-09-17 10:40:32: Epoch 40 finished -- Train loss: 0.1051 - Val loss: 0.1516 -- Elapsed time: 22.4s
+2021-09-17 10:40:37: Last weights saved at epoch 40
+2021-09-17 10:40:37: Starting epoch 41
+2021-09-17 10:41:00: Epoch 41 finished -- Train loss: 0.1020 - Val loss: 0.1420 -- Elapsed time: 22.5s
+2021-09-17 10:41:03: Last weights saved at epoch 41
+2021-09-17 10:41:03: Starting epoch 42
+2021-09-17 10:41:25: Epoch 42 finished -- Train loss: 0.1016 - Val loss: 0.1506 -- Elapsed time: 22.3s
+2021-09-17 10:41:28: Last weights saved at epoch 42
+2021-09-17 10:41:28: Starting epoch 43
+2021-09-17 10:41:51: Epoch 43 finished -- Train loss: 0.1059 - Val loss: 0.1574 -- Elapsed time: 23.1s
+2021-09-17 10:41:54: Last weights saved at epoch 43
+2021-09-17 10:41:54: Starting epoch 44
+2021-09-17 10:42:17: Epoch 44 finished -- Train loss: 0.1034 - Val loss: 0.1501 -- Elapsed time: 23.2s
+2021-09-17 10:42:20: Last weights saved at epoch 44
+2021-09-17 10:42:20: Starting epoch 45
+2021-09-17 10:42:43: Epoch 45 finished -- Train loss: 0.0986 - Val loss: 0.1530 -- Elapsed time: 22.8s
+2021-09-17 10:42:48: Last weights saved at epoch 45
+2021-09-17 10:42:48: Starting epoch 46
+2021-09-17 10:43:11: Epoch 46 finished -- Train loss: 0.0989 - Val loss: 0.1481 -- Elapsed time: 22.2s
+2021-09-17 10:43:13: Last weights saved at epoch 46
+2021-09-17 10:43:13: Starting epoch 47
+2021-09-17 10:43:36: Epoch 47 finished -- Train loss: 0.0979 - Val loss: 0.1496 -- Elapsed time: 22.2s
+2021-09-17 10:43:38: Last weights saved at epoch 47
+2021-09-17 10:43:38: Starting epoch 48
+2021-09-17 10:44:01: Epoch 48 finished -- Train loss: 0.0926 - Val loss: 0.1476 -- Elapsed time: 22.6s
+2021-09-17 10:44:04: Last weights saved at epoch 48
+2021-09-17 10:44:04: Starting epoch 49
+2021-09-17 10:44:26: Epoch 49 finished -- Train loss: 0.0905 - Val loss: 0.1549 -- Elapsed time: 22.5s
+2021-09-17 10:44:29: Last weights saved at epoch 49
+2021-09-17 10:44:29: Starting epoch 50
+2021-09-17 10:44:51: Epoch 50 finished -- Train loss: 0.0950 - Val loss: 0.1553 -- Elapsed time: 22.3s
+2021-09-17 10:44:57: Last weights saved at epoch 50
+2021-09-17 10:44:57: Starting epoch 51
+2021-09-17 10:45:19: Epoch 51 finished -- Train loss: 0.0980 - Val loss: 0.1532 -- Elapsed time: 22.1s
+2021-09-17 10:45:22: Last weights saved at epoch 51
+2021-09-17 10:45:22: Starting epoch 52
+2021-09-17 10:45:44: Epoch 52 finished -- Train loss: 0.0952 - Val loss: 0.1596 -- Elapsed time: 22.2s
+2021-09-17 10:45:47: Last weights saved at epoch 52
+2021-09-17 10:45:47: Starting epoch 53
+2021-09-17 10:46:09: Epoch 53 finished -- Train loss: 0.0896 - Val loss: 0.1527 -- Elapsed time: 22.5s
+2021-09-17 10:46:12: Last weights saved at epoch 53
+2021-09-17 10:46:12: Starting epoch 54
+2021-09-17 10:46:34: Epoch 54 finished -- Train loss: 0.0898 - Val loss: 0.1526 -- Elapsed time: 22.2s
+2021-09-17 10:46:37: Last weights saved at epoch 54
+2021-09-17 10:46:37: Starting epoch 55
+2021-09-17 10:46:59: Epoch 55 finished -- Train loss: 0.0914 - Val loss: 0.1486 -- Elapsed time: 22.4s
+2021-09-17 10:47:05: Last weights saved at epoch 55
+2021-09-17 10:47:05: Starting epoch 56
+2021-09-17 10:47:28: Epoch 56 finished -- Train loss: 0.0924 - Val loss: 0.1606 -- Elapsed time: 22.3s
+2021-09-17 10:47:30: Last weights saved at epoch 56
+2021-09-17 10:47:30: Starting epoch 57
+2021-09-17 10:47:53: Epoch 57 finished -- Train loss: 0.0891 - Val loss: 0.1475 -- Elapsed time: 22.5s
+2021-09-17 10:47:55: Last weights saved at epoch 57
+2021-09-17 10:47:55: Starting epoch 58
+2021-09-17 10:48:18: Epoch 58 finished -- Train loss: 0.0906 - Val loss: 0.1613 -- Elapsed time: 22.4s
+2021-09-17 10:48:21: Last weights saved at epoch 58
+2021-09-17 10:48:21: Starting epoch 59

@@ -1,10 +1,11 @@
-from PIL import Image
+from PIL import Image, ImageOps
 import torch
 import os
 import pandas as pd
 import numpy as np
 from torchvision import transforms
 import yaml
+import cv2
 
 
 class Set(torch.utils.data.Dataset):
@@ -72,13 +73,13 @@ class Set(torch.utils.data.Dataset):
 
         filename = self.data.iloc[idx, 0]
 
+        if self.augmentation_pipeline is not None:
+            image, mask = self.augmentation_pipeline(image, mask)
+
         # Must be PIL images
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
-
-        if self.augmentation_pipeline is not None:
-            image, mask = self.augmentation_pipeline(image, mask)
 
         to_tensor = transforms.ToTensor()
 
@@ -156,20 +157,44 @@ def load_dataset(parameter_dict, print_info=True):
 if __name__ == "__main__":
     from image_transformations import load_img_transforms
     from data_augmentation import load_data_augmentation_pipes
+    from hyperparameters import HyperparameterReader
 
     DEVICE = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
     transforms_dict = load_img_transforms()
-    augmentation_dict = load_data_augmentation_pipes()
+    augmentation_dict = load_data_augmentation_pipes(data_aug=True)
 
-    dataset_param_dict = {
-        "data_root_dir": "/workspace/shared_files/Dataset_BUSI_with_GT",
-        "train_csv_file": "gan_train_bus_images.csv",
-        "val_csv_file": "gan_val_bus_images.csv",
-        "test_csv_file": "gan_val_bus_images.csv",
-        "transforms": transforms_dict,
-        "augmentation_pipelines": augmentation_dict,
-        "batch_size": 16,
-        "workers": 9
-    }
-    dataset = load_dataset(dataset_param_dict)
+    hyperparameter_loader = HyperparameterReader("hyperparameters.yaml")
+    parameter_dict = hyperparameter_loader.load_param_dict()
+
+    parameter_dict["transforms"] = transforms_dict
+    parameter_dict["augmentation_pipelines"] = augmentation_dict
+
+    dataset = load_dataset(parameter_dict)
+
+    trans = transforms.ToPILImage()
+
+    save_folder = "/workspace/shared_files/aug"
+
+    for i, batched_sample in enumerate(dataset.trainset_loader):
+
+        images, masks, filenames = batched_sample["image"], batched_sample["mask"], batched_sample["filename"]
+
+        for j in range(images.shape[0]):
+            image, mask = images[j].to("cpu"), masks[j].to("cpu")
+            name = filenames[j].split('/')[-1]
+
+            image_save = trans(image)
+            mask_save = trans(mask)
+
+            opencv_image = np.array(image_save)
+            opencv_image = opencv_image[:, :, ::-1].copy()
+            opencv_gt = np.array(mask_save)
+
+            contours_gt, _ = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            cv2.drawContours(opencv_image, contours_gt, -1, (0, 255, 0), 1)
+
+            #opencv_image = cv2.resize(opencv_image, (512, 512))
+
+            print(os.path.join(save_folder, f"{name}"))
+            cv2.imwrite(os.path.join(save_folder, f"{name}"), opencv_image)

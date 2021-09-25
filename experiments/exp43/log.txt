@@ -1,0 +1,51 @@
+2021-09-25 13:51:00: Launching WGanTrainer...
+2021-09-25 13:51:00: Reading hyperparameters from hyperparameters.yaml
+2021-09-25 13:51:00: Hyperparameters succesfully read:
+2021-09-25 13:51:00: 	net: UNetpp
+2021-09-25 13:51:00: 	bilinear: True
+2021-09-25 13:51:00: 	n_epochs: 3000
+2021-09-25 13:51:00: 	batch_size: 16
+2021-09-25 13:51:00: 	dataset: dataset2.yaml
+2021-09-25 13:51:00: 	workers: 9
+2021-09-25 13:51:00: 	cache: ram
+2021-09-25 13:51:00: 	data_augmentation: True
+2021-09-25 13:51:00: 	tensorboard: True
+2021-09-25 13:51:00: 	pretrained_weights: False
+2021-09-25 13:51:00: 	random_seed: 42
+2021-09-25 13:51:00: 	optimizer: RMSProp
+2021-09-25 13:51:00: 	adam_beta1: 0.9
+2021-09-25 13:51:00: 	adam_beta2: 0.999
+2021-09-25 13:51:00: 	learning_rate: 0.00025
+2021-09-25 13:51:00: 	pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
+2021-09-25 13:51:00: 	pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
+2021-09-25 13:51:00: 	pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
+2021-09-25 13:51:00: 	critic: Critic1
+2021-09-25 13:51:00: 	generator_learning_rate: 0.0002
+2021-09-25 13:51:00: 	critic_learning_rate: 0.0002
+2021-09-25 13:51:00: 	n_critic: 5
+2021-09-25 13:51:00: Found device: cuda:0
+2021-09-25 13:51:00: Transforms dict load succesfully
+2021-09-25 13:51:00: Data augmentation dict load succesfully
+2021-09-25 13:51:08: Dataset load succesfully
+2021-09-25 13:51:10: Generator UNetpp load succesfully
+2021-09-25 13:51:10: Critic Critic1 load succesfully
+2021-09-25 13:51:10: Starting training the model...
+2021-09-25 13:51:10: Starting epoch 1
+2021-09-25 13:51:57: Epoch 1 finished -- Generator train loss: -0.5005 - Critic train loss: 1490.0651 -- Elapsed time: 47.4s
+2021-09-25 13:52:01: Last weights saved at epoch 1
+2021-09-25 13:52:01: New best value of DSC reach: 0.0329 (last: -1.0000)
+2021-09-25 13:52:02: Best weights saved at epoch 1
+2021-09-25 13:52:02: Starting epoch 2
+2021-09-25 13:52:49: Epoch 2 finished -- Generator train loss: -0.0695 - Critic train loss: 4.1184 -- Elapsed time: 47.9s
+2021-09-25 13:52:53: Last weights saved at epoch 2
+2021-09-25 13:52:53: New best value of DSC reach: 0.1048 (last: 0.0329)
+2021-09-25 13:52:54: Best weights saved at epoch 2
+2021-09-25 13:52:54: Starting epoch 3
+2021-09-25 13:53:41: Epoch 3 finished -- Generator train loss: -0.0569 - Critic train loss: 0.4533 -- Elapsed time: 47.7s
+2021-09-25 13:53:45: Last weights saved at epoch 3
+2021-09-25 13:53:45: New best value of DSC reach: 0.2175 (last: 0.1048)
+2021-09-25 13:53:45: Best weights saved at epoch 3
+2021-09-25 13:53:45: Starting epoch 4
+2021-09-25 13:54:35: Epoch 4 finished -- Generator train loss: -0.0519 - Critic train loss: 0.1418 -- Elapsed time: 50.0s
+2021-09-25 13:54:40: Last weights saved at epoch 4
+2021-09-25 13:54:40: Starting epoch 5

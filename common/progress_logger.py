@@ -1,5 +1,52 @@
 import time
 
+class ProgressBar:
+
+    def __init__(self, steps):
+
+        self.step = 0
+        self.t0 = time.time()
+        self.steps = steps
+        # Longitud de la barra de progreso en caracteres
+        self.bar_length = 40
+
+    def step_bar(self):
+
+        t1 = time.time()
+
+        self.step += 1
+
+        bar = self.get_updated_bar()
+
+        if self.step > self.steps:
+            print()
+        elif self.step == self.steps:
+            print("{} Step:{}/{} Elapsed time: {:.2f}s".format(bar, self.step, self.steps, t1 - self.t0),
+                  end='\r')
+            print()
+        else:
+            print("{} Step:{}/{} Elapsed time: {:.2f}s".format(bar, self.step, self.steps, t1 - self.t0),
+                  end='\r')
+
+    def get_updated_bar(self):
+        """
+        Generador y getter de la barra actual
+
+        :return: string con la barra actual actualizada
+        """
+        percentage = self.step / self.steps
+        progress_n = int(self.bar_length * percentage)
+
+        bar = "|"
+        for i in range(self.bar_length):
+            if i <= progress_n:
+                bar += "|"
+            else:
+                bar += " "
+        bar += "|"
+
+        return bar
+
 
 class ProgressLogger:
     """

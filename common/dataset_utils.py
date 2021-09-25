@@ -64,9 +64,30 @@ def get_datasetB(path):
 
     return images
 
+def get_dataset112(path):
+   
+    folders = ["benign", "malignant"]
+
+    for folder in folders:
+
+        images_path = os.path.join(path, folder, "images")
+        gt_path = os.path.join(path, folder, "labels")
+
+        image_files = os.listdir(images_path)
+
+        for image in image_files:
+
+            _image = cv2.imread(os.path.join(images_path, image))
+            _mask = cv2.imread(os.path.join(gt_path, image))
+
+            new_name = f"D1-12_{folder}_{image}".replace(".bmp", ".png")
+
+            cv2.imwrite(f"/home/inaki/shared_files/TFM_Dataset/images/Dataset_paper1-12/{new_name}", _image)
+            cv2.imwrite(f"/home/inaki/shared_files/TFM_Dataset/gt/Dataset_paper1-12/{new_name}", _mask)
+
 def gen_dataset(path, val_p = 0.20):
 
-    folders = ["BUSI", "DatasetB", "ExpandedUnetPaper"]
+    folders = ["BUSI", "DatasetB", "ExpandedUnetPaper", "Dataset_paper1-12"]
 
     images = []
 
@@ -93,14 +114,14 @@ def gen_dataset(path, val_p = 0.20):
                 train_set.append(image)
 
         
-        with open("train_dataset1.csv", 'w') as file:
+        with open("train_dataset2.csv", 'w') as file:
             file.write("image_path,gt_path,label\n")
             for image in train_set:
                 label = "benign" if "benign" in image else "malignant"
                 mask = image.replace("/images/", "/gt/")
                 file.write(f"{image},{mask},{label}\n")       
 
-        with open("val_dataset1.csv", 'w') as file:
+        with open("val_dataset2.csv", 'w') as file:
             file.write("image_path,gt_path,label\n")
             for image in val_set:
                 label = "benign" if "benign" in image else "malignant"
@@ -114,3 +135,4 @@ if __name__ == '__main__':
     #gen_dataset(dataset_B)
     #get_expandedUnetDataset("/home/inaki/shared_files/nuevas/pone.0253202.s001/Data/TrainingDataSet")
     gen_dataset("/home/inaki/shared_files/TFM_Dataset/images")
+    #get_dataset112("/home/inaki/shared_files/Dataset_BUSI_with_GT/11/code_data_results/dataset/BUS_images")

@@ -96,7 +96,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
     if not epoch == -1:
         save_folder = os.path.join(folder, f"epoch_{epoch}")
     else:
-        save_folder = folder
+        save_folder = os.path.join(folder, "validation")
 
     if SAVE_SEGS and (epoch % N_EPOCHS_SAVE == 0 or epoch == -1):
         if not os.path.isdir(save_folder):
@@ -123,8 +123,6 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
     segmentor.eval()
 
-    #logger.initialize_val_bar()
-
     with torch.no_grad():
 
         for i, batched_sample in enumerate(dataloader):
@@ -143,8 +141,6 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                 name = filenames[j].split('/')[-1]
 
                 FP, FN, TP, TN = get_conf_mat(segmentation.numpy(), mask.numpy())
-
-                # print(f"FP = {FP}, FN = {FN}, TP = {TP}, TN = {TN}, TOTAL = {FP + FN + TP + TN}")
 
                 ccr = np.divide(TP + TN, FP + FN + TP + TN)
 
@@ -207,8 +203,8 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         opencv_segmentation = (opencv_segmentation > 0.5).astype(np.float32)
                         """
 
-                        contours_gt, hierarchy = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                        contours_seg, hierarchy = cv2.findContours(opencv_segmentation, cv2.RETR_TREE,
+                        contours_gt, _ = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                        contours_seg, _ = cv2.findContours(opencv_segmentation, cv2.RETR_TREE,
                                                                   cv2.CHAIN_APPROX_SIMPLE)
 
                         cv2.drawContours(opencv_image, contours_gt, -1, (0, 255, 0), 1)
@@ -217,8 +213,6 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         opencv_image = cv2.resize(opencv_image, (512, 512))
 
                         cv2.imwrite(os.path.join(save_folder, f"{name}"), opencv_image)
-
-            #logger.update_bar()
 
         ccrs = np.array(ccrs)[~np.isnan(np.array(ccrs))]
         precisions = np.array(precisions)[~np.isnan(np.array(precisions))]
