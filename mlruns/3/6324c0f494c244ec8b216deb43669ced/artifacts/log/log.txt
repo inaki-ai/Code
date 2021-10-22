@@ -58,3 +58,10 @@
 2021-10-22 16:22:12: New best value of DSC reach: 0.8305 (last: 0.8010)
 2021-10-22 16:22:12: Best weights saved at epoch 5
 2021-10-22 16:22:12: Starting epoch 6
+2021-10-22 16:23:03: Epoch 6 finished -- Train loss: 0.5110 - Val loss: 0.4834 -- Elapsed time: 50.7s
+2021-10-22 16:23:06: Last weights saved at epoch 6
+2021-10-22 16:23:06: New best value of DSC reach: 0.8351 (last: 0.8305)
+2021-10-22 16:23:06: Best weights saved at epoch 6
+2021-10-22 16:23:06: Starting epoch 7
+2021-10-22 16:23:57: Epoch 7 finished -- Train loss: 0.4918 - Val loss: 0.4637 -- Elapsed time: 50.7s
+2021-10-22 16:24:00: Last weights saved at epoch 7
