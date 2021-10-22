@@ -3,6 +3,7 @@ import os
 import random
 import imgaug
 from datetime import datetime
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -12,8 +13,9 @@ from torch.utils.tensorboard import SummaryWriter
 from models.segmentors.unet import UNet, UNet2
 from models.segmentors.rdau_net import RDAU_NET
 from models.segmentors.unetpp import UNetpp
+from self_attention_cv.transunet import TransUnet
 
-from models.critics.critic import Critic1
+from models.critics.critic import Critic1, Critic2, Critic3_CT_WGAN
 
 from common.hyperparameters import HyperparameterReader
 from common.dataset_handler import load_dataset
@@ -23,23 +25,22 @@ from common.utils import check_experiments_folder, check_runs_folder
 from common.segmentation_metrics import get_evaluation_metrics
 from common.progress_logger import ProgressBar
 
+import mlflow
 
 class WGanTrainer:
-    """
-    a partir del 38 pruebas
-    """
 
     def __init__(self, hyperparams_file):
         
         self.experiment_folder = check_experiments_folder()
 
-        self.LOG("Launching WGanTrainer...")
-        self.LOG(f"Reading hyperparameters from {hyperparams_file}")
-
         hyperparameter_loader = HyperparameterReader(hyperparams_file)
         self.parameter_dict = hyperparameter_loader.load_param_dict()
 
-        self.LOG("Hyperparameters succesfully read:")
+        mlflow.set_tag('Exp', self.experiment_folder)
+        mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
+
+        self.LOG("Launching WganTrainer...")
+        self.LOG("Hyperparameters succesfully read from {hyperparams_file}:")
         for key, val in self.parameter_dict.items():
             self.LOG(f"\t{key}: {val}")
 
@@ -73,12 +74,22 @@ class WGanTrainer:
         elif self.parameter_dict["net"] == "UNetpp":
             self.generator = UNetpp(1).to(self.parameter_dict["device"])
             self.generator.init_weights()
+        elif self.parameter_dict["net"] == "TransUNet":
+            self.generator = TransUnet(in_channels=3, img_dim=128, vit_blocks=self.parameter_dict["vit_blocks"],
+                                    vit_dim_linear_mhsa_block=self.parameter_dict["vit_dim"],
+                                    classes=1).to(self.parameter_dict["device"])
         else:
             #TODO
             pass
 
         if self.parameter_dict["critic"] == "Critic1":
             self.critic = Critic1(3).to(self.parameter_dict["device"])
+            self.critic.init_weights()
+        elif self.parameter_dict["critic"] == "Critic2":
+            self.critic = Critic2(3).to(self.parameter_dict["device"])
+            self.critic.init_weights()
+        elif self.parameter_dict["critic"] == "Critic3_CT_WGAN":
+            self.critic = Critic3_CT_WGAN(3).to(self.parameter_dict["device"])
             self.critic.init_weights()
         else:
             #TODO
@@ -104,9 +115,13 @@ class WGanTrainer:
             # TODO
             pass
 
-        if self.parameter_dict["pretrained_weights"]:
-            self.load_weights()
-            self.LOG("Pretained weights load succesfully")  
+        if self.parameter_dict["pretrained_weights_generator"]:
+            self.load_weights(generator=True)
+            self.LOG("Pretained weights of generator load succesfully")
+
+        if self.parameter_dict["pretrained_weights_critic"]:
+            self.load_weights(generator=False)
+            self.LOG("Pretained weights of critic load succesfully")  
 
         if self.parameter_dict["tensorboard"]:
             self.tb_runs_folder = check_runs_folder(self.experiment_folder.split('/')[-1])
@@ -122,17 +137,23 @@ class WGanTrainer:
         random.seed(random_seed)
         torch.manual_seed(random_seed)
         imgaug.seed(random_seed)
+        np.random.seed(random_seed)
 
 
-    def load_weights(self):
+    def load_weights(self, generator):
         try:
-            self.generator.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_generator"]))
-            self.critic.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_critic"]))
+            if generator:
+                self.generator.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_generator"]))
+            else:
+                self.critic.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_critic"]))
 
         except:
-            path1 = self.parameter_dict["pretrained_weights_path_generator"]
-            path2 = self.parameter_dict["pretrained_weights_path_critic"]
-            raise Exception(f"[E] Pretrained weights do not exist at {path1}/{path2} or they are not compatible")
+            if generator:
+                path = self.parameter_dict["pretrained_weights_path_generator"]
+            else:
+                path = self.parameter_dict["pretrained_weights_path_critic"]
+
+            raise Exception(f"[E] Pretrained weights do not exist at {path} or they are not compatible")
 
 
     def save_weights(self, best=False):
@@ -182,12 +203,29 @@ class WGanTrainer:
 
         return gradient_penalty
 
+    @staticmethod
+    def consistency_term(critic, real_segmentations, M, penalty, device):
+        
+        dw_x1, dw_x1_i = critic(real_segmentations, dropout=0.5, intermediate_output=True) # Perturb the input by applying dropout to hidden layers.
+        dw_x2, dw_x2_i = critic(real_segmentations, dropout=0.5, intermediate_output=True)
+
+        # Using l2 norm as the distance metric d, referring to the official code (paper ambiguous on d).
+        second_to_last_reg = ((dw_x1_i-dw_x2_i) ** 2).mean(dim=1).mean(dim=0)
+        last = ((dw_x1-dw_x2) ** 2).mean(dim=1)
+
+        d_wct_loss = last + 0.1 * second_to_last_reg - M
+
+        d_wct_loss, _ = torch.max(d_wct_loss, 0)
+
+        return penalty * d_wct_loss
+
 
     def generator_step(self, images):
 
         self.optimizerG.zero_grad()
 
-        segmentations = self.generator(images)
+        hard_sigmoid = nn.Hardsigmoid()
+        segmentations = hard_sigmoid(self.generator(images))
 
         images_with_segmentations = images * segmentations
 
@@ -205,7 +243,8 @@ class WGanTrainer:
 
         images_with_masks = images * masks
 
-        segmentations = self.generator(images).detach()
+        hard_sigmoid = nn.Hardsigmoid()
+        segmentations = hard_sigmoid(self.generator(images).detach())
 
         images_with_segmentations = images * segmentations
 
@@ -213,7 +252,15 @@ class WGanTrainer:
 
         _gradient_penalty = self.gradient_penalty(self.critic, images_with_masks, images_with_segmentations,
                                                   10, self.parameter_dict["device"])
+
         loss_C += _gradient_penalty
+
+        if self.parameter_dict["consistency_term"]:
+            _consistency_term = self.consistency_term(self.critic, images_with_masks,
+                                                    M=self.parameter_dict["M"], penalty=2,
+                                                    device=self.parameter_dict["device"])
+
+            loss_C += _consistency_term
 
         loss_C.backward()
 
@@ -268,24 +315,50 @@ class WGanTrainer:
             end = time.time()
             elapsed = end - start
 
+            mlflow.log_metric("train_gen_loss", train_gen_loss)
+            mlflow.log_metric("train_crit_loss", train_crit_loss)
+
             msg = f"Epoch {epoch} finished -- Generator train loss: {train_gen_loss:.4f} - " +\
                   f"Critic train loss: {train_crit_loss:.4f} -- Elapsed time: {elapsed:.1f}s"
             print(msg + "\n")
             self.LOG(msg)
 
             if self.writer is not None:
-                self.writer.add_scalar("Generator loss/train", train_gen_loss, epoch)
+                self.writer.add_scalar("Train loss/generator", train_gen_loss, epoch)
                 if train_crit_loss < 100:
-                    self.writer.add_scalar("Critic loss/train", train_crit_loss, epoch)
+                    self.writer.add_scalar("Train loss/critic", train_crit_loss, epoch)
 
             metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.generator,
                                     self.parameter_dict["device"], writer=self.writer,
                                     SAVE_SEGS=True, N_EPOCHS_SAVE=20, folder=f"{self.experiment_folder}/segmentations")
 
+            mlflow.log_metric("CCR", metrics.CCR, step=epoch)
+            mlflow.log_metric("Precision", metrics.precision, step=epoch)
+            mlflow.log_metric("Recall - Sensitivity", metrics.recall, step=epoch)
+            mlflow.log_metric("Specifity", metrics.specifity, step=epoch)
+            mlflow.log_metric("F1 score", metrics.f1_score, step=epoch)
+            mlflow.log_metric("Jaccard coef - IoU", metrics.jaccard, step=epoch)
+            mlflow.log_metric("Dice score - DSC", metrics.dice, step=epoch)
+            mlflow.log_metric("ROC AUC", metrics.roc_auc, step=epoch)
+            mlflow.log_metric("Precision-recall AUC", metrics.precision_recall_auc, step=epoch)
+            mlflow.log_metric("Hausdorf error", metrics.hausdorf_error, step=epoch)
+
             self.save_weights()
             self.LOG(f"Last weights saved at epoch {epoch}")
 
             if metrics.dice > self.dsc_best:
+
+                mlflow.log_metric("CCR_best", metrics.CCR, step=epoch)
+                mlflow.log_metric("Precision_best", metrics.precision, step=epoch)
+                mlflow.log_metric("Recall - Sensitivity_best", metrics.recall, step=epoch)
+                mlflow.log_metric("Specifity_best", metrics.specifity, step=epoch)
+                mlflow.log_metric("F1 score_best", metrics.f1_score, step=epoch)
+                mlflow.log_metric("Jaccard coef - IoU_best", metrics.jaccard, step=epoch)
+                mlflow.log_metric("Dice score - DSC_best", metrics.dice, step=epoch)
+                mlflow.log_metric("ROC AUC_best", metrics.roc_auc, step=epoch)
+                mlflow.log_metric("Precision-recall AUC_best", metrics.precision_recall_auc, step=epoch)
+                mlflow.log_metric("Hausdorf error_best", metrics.hausdorf_error, step=epoch)
+
                 self.LOG(f"New best value of DSC reach: {metrics.dice:.4f} (last: {self.dsc_best:.4f})")
                 self.dsc_best = metrics.dice
                 self.save_weights(best=True)
@@ -294,14 +367,14 @@ class WGanTrainer:
             self.LOG_METRICS(metrics, epoch, train_gen_loss, train_crit_loss)
 
 
-    def validate(self):
+    def test(self):
 
         self.load_weights()
         self.generator.eval()
 
         print("[I] Evalutating the model...")
 
-        metrics = get_evaluation_metrics(None, -1, self.dataset.valset_loader, self.generator,
+        metrics = get_evaluation_metrics(None, -1, self.dataset.testset_loader, self.generator,
                                     self.parameter_dict["device"], None, COLOR=True,
                                     SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations")
 
@@ -324,6 +397,8 @@ class WGanTrainer:
     def LOG(self, msg):
 
         file = os.path.join(self.experiment_folder, "log.txt")
+
+        mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
 
         if not os.path.isfile(file):
             with open(file, 'w') as f:

@@ -80,3 +80,42 @@ def check_runs_folder(exp_folder):
 
     os.mkdir(f"runs/{exp_folder}")
     return f"runs/{exp_folder}/{exp_folder}"
+
+from scipy.ndimage.filters import uniform_filter
+from scipy.ndimage.measurements import variance
+import cv2
+
+def lee_filter(img, size):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img_mean = uniform_filter(img, (size, size))
+    img_sqr_mean = uniform_filter(img**2, (size, size))
+    img_variance = img_sqr_mean - img_mean**2
+
+    overall_variance = variance(img)
+
+    img_weights = img_variance / (img_variance + overall_variance)
+    img_output = img_mean + img_weights * (img - img_mean)
+
+    img_output = cv2.cvtColor(img_output, cv2.COLOR_GRAY2BGR)
+
+    return img_output
+
+if __name__ == '__main__':
+    import cv2
+    import numpy as np
+
+    images_path = ["/home/inaki/shared_files/Dataset_TFM/images/BUSI/benign (18).png", "/home/inaki/shared_files/Dataset_TFM/images/DatasetB/benign_000019.png"]
+
+    if not os.path.isdir("borrar"):
+        os.mkdir('borrar')
+
+    for i, img_f in enumerate(images_path):
+        img = cv2.imread(img_f)
+
+        img = cv2.resize(img, (128, 128))
+
+        img_filtered = lee_filter(img,  2)
+
+        save_img = np.hstack([img, img_filtered])
+
+        cv2.imwrite(os.path.join('borrar', f'{i}.png'), save_img)

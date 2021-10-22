@@ -1,0 +1,4 @@
+artifact_location: file:///workspace/shared_files/TFM/Code/mlruns/2
+experiment_id: '2'
+lifecycle_stage: active
+name: RDAUNet

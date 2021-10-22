@@ -1,4 +1,4 @@
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 import torch
 import os
 import pandas as pd
@@ -34,7 +34,14 @@ class Set(torch.utils.data.Dataset):
             self.images = []
             for idx in range(len(self.data)):
                 image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+                #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
                 mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+
+                image = np.array(image)
+                #image = cv2.resize(image, (128,128))
+
+                image = cv2.bilateralFilter(image, 15, 50, 50)
+                image = Image.fromarray(image)
 
                 self.images.append((image, mask))
 
@@ -62,6 +69,7 @@ class Set(torch.utils.data.Dataset):
         else:
         # PIL images
             image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+            #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
             mask = Image.open(self.data.iloc[idx, 1]).convert("L")
 
         if "malignant" in self.data.iloc[idx, 0]:

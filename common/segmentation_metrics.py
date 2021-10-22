@@ -130,7 +130,8 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
             images, masks, filenames = batched_sample["image"].to(DEVICE), batched_sample["mask"].to(DEVICE), \
                                      batched_sample["filename"]
 
-            segmentations = segmentor(images)
+            hard_sigmoid = nn.Hardsigmoid()
+            segmentations = hard_sigmoid(segmentor(images))
             segmentations = torch.autograd.Variable((segmentations > 0.5).float())
 
             trans = transforms.ToPILImage()

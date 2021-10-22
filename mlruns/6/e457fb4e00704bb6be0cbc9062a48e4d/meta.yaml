@@ -1,0 +1,15 @@
+artifact_uri: file:///workspace/shared_files/TFM/Code/mlruns/6/e457fb4e00704bb6be0cbc9062a48e4d/artifacts
+end_time: 1634673081471
+entry_point_name: ''
+experiment_id: '6'
+lifecycle_stage: active
+name: ''
+run_id: e457fb4e00704bb6be0cbc9062a48e4d
+run_uuid: e457fb4e00704bb6be0cbc9062a48e4d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1634659955726
+status: 4
+tags: []
+user_id: root

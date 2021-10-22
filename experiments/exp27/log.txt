@@ -1,0 +1,184 @@
+2021-10-20 12:32:34: Launching WganTrainer...
+2021-10-20 12:32:34: Hyperparameters succesfully read from {hyperparams_file}:
+2021-10-20 12:32:34: 	net: UNetpp
+2021-10-20 12:32:34: 	bilinear: True
+2021-10-20 12:32:34: 	n_epochs: 3000
+2021-10-20 12:32:34: 	batch_size: 16
+2021-10-20 12:32:34: 	dataset: dataset4.yaml
+2021-10-20 12:32:34: 	workers: 9
+2021-10-20 12:32:34: 	cache: ram
+2021-10-20 12:32:34: 	data_augmentation: True
+2021-10-20 12:32:34: 	tensorboard: True
+2021-10-20 12:32:34: 	random_seed: 42
+2021-10-20 12:32:34: 	optimizer: RMSProp
+2021-10-20 12:32:34: 	adam_beta1: 0.9
+2021-10-20 12:32:34: 	adam_beta2: 0.999
+2021-10-20 12:32:34: 	vit_blocks: 8
+2021-10-20 12:32:34: 	vit_dim: 512
+2021-10-20 12:32:34: 	consistency_term: True
+2021-10-20 12:32:34: 	M: 0
+2021-10-20 12:32:34: 	learning_rate: 7.5e-05
+2021-10-20 12:32:34: 	pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp22/weights/best.pt
+2021-10-20 12:32:34: 	pretrained_weights: False
+2021-10-20 12:32:34: 	pretrained_weights_generator: True
+2021-10-20 12:32:34: 	pretrained_weights_critic: False
+2021-10-20 12:32:34: 	pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp22/weights/last.pt
+2021-10-20 12:32:34: 	pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
+2021-10-20 12:32:34: 	critic: Critic3_CT_WGAN
+2021-10-20 12:32:34: 	generator_learning_rate: 3.5e-07
+2021-10-20 12:32:34: 	critic_learning_rate: 2.5e-07
+2021-10-20 12:32:34: 	n_critic: 5
+2021-10-20 12:32:34: Found device: cuda:0
+2021-10-20 12:32:34: Transforms dict load succesfully
+2021-10-20 12:32:34: Data augmentation dict load succesfully
+2021-10-20 12:33:07: Dataset load succesfully
+2021-10-20 12:33:09: Generator UNetpp load succesfully
+2021-10-20 12:33:09: Critic Critic3_CT_WGAN load succesfully
+2021-10-20 12:33:09: Pretained weights of generator load succesfully
+2021-10-20 12:33:09: Starting training the model...
+2021-10-20 12:33:09: Starting epoch 1
+2021-10-20 12:34:16: Epoch 1 finished -- Generator train loss: -0.1457 - Critic train loss: 76.5372 -- Elapsed time: 66.9s
+2021-10-20 12:34:19: Last weights saved at epoch 1
+2021-10-20 12:34:19: New best value of DSC reach: 0.8608 (last: -1.0000)
+2021-10-20 12:34:19: Best weights saved at epoch 1
+2021-10-20 12:34:19: Starting epoch 2
+2021-10-20 12:35:25: Epoch 2 finished -- Generator train loss: -0.1432 - Critic train loss: 56.3425 -- Elapsed time: 65.9s
+2021-10-20 12:35:28: Last weights saved at epoch 2
+2021-10-20 12:35:28: Starting epoch 3
+2021-10-20 12:36:34: Epoch 3 finished -- Generator train loss: -0.1556 - Critic train loss: 46.2739 -- Elapsed time: 66.1s
+2021-10-20 12:36:37: Last weights saved at epoch 3
+2021-10-20 12:36:37: Starting epoch 4
+2021-10-20 12:37:43: Epoch 4 finished -- Generator train loss: -0.1385 - Critic train loss: 37.7020 -- Elapsed time: 65.8s
+2021-10-20 12:37:46: Last weights saved at epoch 4
+2021-10-20 12:37:46: New best value of DSC reach: 0.8618 (last: 0.8608)
+2021-10-20 12:37:47: Best weights saved at epoch 4
+2021-10-20 12:37:47: Starting epoch 5
+2021-10-20 12:38:53: Epoch 5 finished -- Generator train loss: -0.1531 - Critic train loss: 32.4332 -- Elapsed time: 66.1s
+2021-10-20 12:38:56: Last weights saved at epoch 5
+2021-10-20 12:38:56: New best value of DSC reach: 0.8652 (last: 0.8618)
+2021-10-20 12:38:56: Best weights saved at epoch 5
+2021-10-20 12:38:56: Starting epoch 6
+2021-10-20 12:40:02: Epoch 6 finished -- Generator train loss: -0.1420 - Critic train loss: 26.7640 -- Elapsed time: 65.9s
+2021-10-20 12:40:05: Last weights saved at epoch 6
+2021-10-20 12:40:05: Starting epoch 7
+2021-10-20 12:41:12: Epoch 7 finished -- Generator train loss: -0.1406 - Critic train loss: 23.2844 -- Elapsed time: 66.6s
+2021-10-20 12:41:15: Last weights saved at epoch 7
+2021-10-20 12:41:15: Starting epoch 8
+2021-10-20 12:42:22: Epoch 8 finished -- Generator train loss: -0.1481 - Critic train loss: 19.4119 -- Elapsed time: 66.3s
+2021-10-20 12:42:25: Last weights saved at epoch 8
+2021-10-20 12:42:25: Starting epoch 9
+2021-10-20 12:43:30: Epoch 9 finished -- Generator train loss: -0.1387 - Critic train loss: 16.3926 -- Elapsed time: 65.5s
+2021-10-20 12:43:33: Last weights saved at epoch 9
+2021-10-20 12:43:34: Starting epoch 10
+2021-10-20 12:44:40: Epoch 10 finished -- Generator train loss: -0.1480 - Critic train loss: 14.0212 -- Elapsed time: 66.1s
+2021-10-20 12:44:43: Last weights saved at epoch 10
+2021-10-20 12:44:43: Starting epoch 11
+2021-10-20 12:45:49: Epoch 11 finished -- Generator train loss: -0.1367 - Critic train loss: 12.2304 -- Elapsed time: 65.7s
+2021-10-20 12:45:52: Last weights saved at epoch 11
+2021-10-20 12:45:52: Starting epoch 12
+2021-10-20 12:46:57: Epoch 12 finished -- Generator train loss: -0.1319 - Critic train loss: 10.5551 -- Elapsed time: 65.6s
+2021-10-20 12:47:01: Last weights saved at epoch 12
+2021-10-20 12:47:01: Starting epoch 13
+2021-10-20 12:48:07: Epoch 13 finished -- Generator train loss: -0.1439 - Critic train loss: 8.9872 -- Elapsed time: 66.1s
+2021-10-20 12:48:10: Last weights saved at epoch 13
+2021-10-20 12:48:10: New best value of DSC reach: 0.8665 (last: 0.8652)
+2021-10-20 12:48:10: Best weights saved at epoch 13
+2021-10-20 12:48:10: Starting epoch 14
+2021-10-20 12:49:16: Epoch 14 finished -- Generator train loss: -0.1337 - Critic train loss: 7.6338 -- Elapsed time: 65.8s
+2021-10-20 12:49:19: Last weights saved at epoch 14
+2021-10-20 12:49:19: Starting epoch 15
+2021-10-20 12:50:25: Epoch 15 finished -- Generator train loss: -0.1462 - Critic train loss: 7.0568 -- Elapsed time: 65.9s
+2021-10-20 12:50:28: Last weights saved at epoch 15
+2021-10-20 12:50:28: New best value of DSC reach: 0.8673 (last: 0.8665)
+2021-10-20 12:50:29: Best weights saved at epoch 15
+2021-10-20 12:50:29: Starting epoch 16
+2021-10-20 12:51:35: Epoch 16 finished -- Generator train loss: -0.1330 - Critic train loss: 6.1015 -- Elapsed time: 65.7s
+2021-10-20 12:51:38: Last weights saved at epoch 16
+2021-10-20 12:51:38: Starting epoch 17
+2021-10-20 12:52:44: Epoch 17 finished -- Generator train loss: -0.1335 - Critic train loss: 5.3281 -- Elapsed time: 66.0s
+2021-10-20 12:52:47: Last weights saved at epoch 17
+2021-10-20 12:52:47: Starting epoch 18
+2021-10-20 12:53:54: Epoch 18 finished -- Generator train loss: -0.1392 - Critic train loss: 4.5665 -- Elapsed time: 66.7s
+2021-10-20 12:53:57: Last weights saved at epoch 18
+2021-10-20 12:53:57: Starting epoch 19
+2021-10-20 12:55:02: Epoch 19 finished -- Generator train loss: -0.1289 - Critic train loss: 4.1696 -- Elapsed time: 65.6s
+2021-10-20 12:55:05: Last weights saved at epoch 19
+2021-10-20 12:55:06: Starting epoch 20
+2021-10-20 12:56:12: Epoch 20 finished -- Generator train loss: -0.1356 - Critic train loss: 3.9123 -- Elapsed time: 66.1s
+2021-10-20 12:56:17: Last weights saved at epoch 20
+2021-10-20 12:56:17: Starting epoch 21
+2021-10-20 12:57:23: Epoch 21 finished -- Generator train loss: -0.1264 - Critic train loss: 3.3892 -- Elapsed time: 65.5s
+2021-10-20 12:57:26: Last weights saved at epoch 21
+2021-10-20 12:57:26: Starting epoch 22
+2021-10-20 12:58:32: Epoch 22 finished -- Generator train loss: -0.1294 - Critic train loss: 3.3225 -- Elapsed time: 65.6s
+2021-10-20 12:58:35: Last weights saved at epoch 22
+2021-10-20 12:58:35: Starting epoch 23
+2021-10-20 12:59:41: Epoch 23 finished -- Generator train loss: -0.1389 - Critic train loss: 2.9534 -- Elapsed time: 66.3s
+2021-10-20 12:59:44: Last weights saved at epoch 23
+2021-10-20 12:59:45: Starting epoch 24
+2021-10-20 13:00:50: Epoch 24 finished -- Generator train loss: -0.1261 - Critic train loss: 2.9637 -- Elapsed time: 65.6s
+2021-10-20 13:00:53: Last weights saved at epoch 24
+2021-10-20 13:00:53: Starting epoch 25
+2021-10-20 13:02:00: Epoch 25 finished -- Generator train loss: -0.1387 - Critic train loss: 2.4706 -- Elapsed time: 66.1s
+2021-10-20 13:02:03: Last weights saved at epoch 25
+2021-10-20 13:02:03: Starting epoch 26
+2021-10-20 13:03:09: Epoch 26 finished -- Generator train loss: -0.1275 - Critic train loss: 2.3292 -- Elapsed time: 66.0s
+2021-10-20 13:03:12: Last weights saved at epoch 26
+2021-10-20 13:03:12: Starting epoch 27
+2021-10-20 13:04:18: Epoch 27 finished -- Generator train loss: -0.1261 - Critic train loss: 2.3383 -- Elapsed time: 65.9s
+2021-10-20 13:04:21: Last weights saved at epoch 27
+2021-10-20 13:04:22: Starting epoch 28
+2021-10-20 13:05:28: Epoch 28 finished -- Generator train loss: -0.1331 - Critic train loss: 2.3586 -- Elapsed time: 66.4s
+2021-10-20 13:05:31: Last weights saved at epoch 28
+2021-10-20 13:05:31: Starting epoch 29
+2021-10-20 13:06:37: Epoch 29 finished -- Generator train loss: -0.1263 - Critic train loss: 2.3559 -- Elapsed time: 65.9s
+2021-10-20 13:06:40: Last weights saved at epoch 29
+2021-10-20 13:06:41: Starting epoch 30
+2021-10-20 13:07:47: Epoch 30 finished -- Generator train loss: -0.1374 - Critic train loss: 2.0811 -- Elapsed time: 66.1s
+2021-10-20 13:07:50: Last weights saved at epoch 30
+2021-10-20 13:07:50: Starting epoch 31
+2021-10-20 13:08:56: Epoch 31 finished -- Generator train loss: -0.1275 - Critic train loss: 2.1037 -- Elapsed time: 65.6s
+2021-10-20 13:08:59: Last weights saved at epoch 31
+2021-10-20 13:08:59: Starting epoch 32
+2021-10-20 13:10:05: Epoch 32 finished -- Generator train loss: -0.1258 - Critic train loss: 1.9398 -- Elapsed time: 66.0s
+2021-10-20 13:10:08: Last weights saved at epoch 32
+2021-10-20 13:10:09: Starting epoch 33
+2021-10-20 13:11:15: Epoch 33 finished -- Generator train loss: -0.1356 - Critic train loss: 1.9397 -- Elapsed time: 66.3s
+2021-10-20 13:11:18: Last weights saved at epoch 33
+2021-10-20 13:11:18: Starting epoch 34
+2021-10-20 13:12:24: Epoch 34 finished -- Generator train loss: -0.1241 - Critic train loss: 1.9170 -- Elapsed time: 65.9s
+2021-10-20 13:12:27: Last weights saved at epoch 34
+2021-10-20 13:12:27: Starting epoch 35
+2021-10-20 13:13:34: Epoch 35 finished -- Generator train loss: -0.1354 - Critic train loss: 1.9356 -- Elapsed time: 66.2s
+2021-10-20 13:13:37: Last weights saved at epoch 35
+2021-10-20 13:13:37: Starting epoch 36
+2021-10-20 13:14:43: Epoch 36 finished -- Generator train loss: -0.1282 - Critic train loss: 1.9802 -- Elapsed time: 66.1s
+2021-10-20 13:14:46: Last weights saved at epoch 36
+2021-10-20 13:14:46: Starting epoch 37
+2021-10-20 13:15:52: Epoch 37 finished -- Generator train loss: -0.1291 - Critic train loss: 1.6900 -- Elapsed time: 65.7s
+2021-10-20 13:15:55: Last weights saved at epoch 37
+2021-10-20 13:15:55: Starting epoch 38
+2021-10-20 13:17:02: Epoch 38 finished -- Generator train loss: -0.1362 - Critic train loss: 1.9882 -- Elapsed time: 66.1s
+2021-10-20 13:17:05: Last weights saved at epoch 38
+2021-10-20 13:17:05: Starting epoch 39
+2021-10-20 13:18:11: Epoch 39 finished -- Generator train loss: -0.1261 - Critic train loss: 1.8113 -- Elapsed time: 65.9s
+2021-10-20 13:18:14: Last weights saved at epoch 39
+2021-10-20 13:18:14: Starting epoch 40
+2021-10-20 13:19:20: Epoch 40 finished -- Generator train loss: -0.1341 - Critic train loss: 1.8336 -- Elapsed time: 66.0s
+2021-10-20 13:19:25: Last weights saved at epoch 40
+2021-10-20 13:19:25: Starting epoch 41
+2021-10-20 13:20:32: Epoch 41 finished -- Generator train loss: -0.1277 - Critic train loss: 1.7329 -- Elapsed time: 66.0s
+2021-10-20 13:20:35: Last weights saved at epoch 41
+2021-10-20 13:20:35: Starting epoch 42
+2021-10-20 13:21:41: Epoch 42 finished -- Generator train loss: -0.1263 - Critic train loss: 2.0043 -- Elapsed time: 65.9s
+2021-10-20 13:21:44: Last weights saved at epoch 42
+2021-10-20 13:21:44: Starting epoch 43
+2021-10-20 13:22:51: Epoch 43 finished -- Generator train loss: -0.1341 - Critic train loss: 1.6644 -- Elapsed time: 66.4s
+2021-10-20 13:22:54: Last weights saved at epoch 43
+2021-10-20 13:22:54: Starting epoch 44
+2021-10-20 13:24:00: Epoch 44 finished -- Generator train loss: -0.1289 - Critic train loss: 1.7283 -- Elapsed time: 65.8s
+2021-10-20 13:24:03: Last weights saved at epoch 44
+2021-10-20 13:24:03: Starting epoch 45
+2021-10-20 13:25:09: Epoch 45 finished -- Generator train loss: -0.1359 - Critic train loss: 1.9099 -- Elapsed time: 65.9s
+2021-10-20 13:25:12: Last weights saved at epoch 45
+2021-10-20 13:25:13: Starting epoch 46

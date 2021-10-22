@@ -1,0 +1,37 @@
+2021-10-18 19:28:02: Launching UnetTrainer...
+2021-10-18 19:28:02: Hyperparameters succesfully read from {hyperparams_file}:
+2021-10-18 19:28:02: 	net: UNetpp
+2021-10-18 19:28:02: 	bilinear: True
+2021-10-18 19:28:02: 	n_epochs: 3000
+2021-10-18 19:28:02: 	batch_size: 16
+2021-10-18 19:28:02: 	dataset: dataset4.yaml
+2021-10-18 19:28:02: 	workers: 9
+2021-10-18 19:28:02: 	cache: ram
+2021-10-18 19:28:02: 	data_augmentation: True
+2021-10-18 19:28:02: 	tensorboard: True
+2021-10-18 19:28:02: 	random_seed: 42
+2021-10-18 19:28:02: 	optimizer: Adam
+2021-10-18 19:28:02: 	adam_beta1: 0.9
+2021-10-18 19:28:02: 	adam_beta2: 0.999
+2021-10-18 19:28:02: 	vit_blocks: 6
+2021-10-18 19:28:02: 	vit_dim: 512
+2021-10-18 19:28:02: 	consistency_term: True
+2021-10-18 19:28:02: 	M: 0
+2021-10-18 19:28:02: 	learning_rate: 7.5e-05
+2021-10-18 19:28:02: 	pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp38/weights/best.pt
+2021-10-18 19:28:02: 	pretrained_weights: False
+2021-10-18 19:28:02: 	pretrained_weights_generator: True
+2021-10-18 19:28:02: 	pretrained_weights_critic: False
+2021-10-18 19:28:02: 	pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp9/weights/best.pt
+2021-10-18 19:28:02: 	pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
+2021-10-18 19:28:02: 	critic: Critic3_CT_WGAN
+2021-10-18 19:28:02: 	generator_learning_rate: 2.5e-06
+2021-10-18 19:28:02: 	critic_learning_rate: 0.0003
+2021-10-18 19:28:02: 	n_critic: 5
+2021-10-18 19:28:02: Found device: cuda:0
+2021-10-18 19:28:02: Transforms dict load succesfully
+2021-10-18 19:28:02: Data augmentation dict load succesfully
+2021-10-18 19:28:21: Dataset load succesfully
+2021-10-18 19:28:22: Model UNetpp load succesfully
+2021-10-18 19:28:22: Starting training the model...
+2021-10-18 19:28:22: Starting epoch 1

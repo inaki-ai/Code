@@ -1,0 +1,4 @@
+artifact_location: file:///workspace/shared_files/TFM/Code/mlruns/4
+experiment_id: '4'
+lifecycle_stage: active
+name: TransUNet
