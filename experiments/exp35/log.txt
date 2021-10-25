@@ -1,0 +1,37 @@
+2021-10-22 21:17:55: Launching WganTrainer...
+2021-10-22 21:17:55: Hyperparameters succesfully read from {hyperparams_file}:
+2021-10-22 21:17:55: 	net: UNetpp
+2021-10-22 21:17:55: 	bilinear: True
+2021-10-22 21:17:55: 	n_epochs: 3000
+2021-10-22 21:17:55: 	batch_size: 16
+2021-10-22 21:17:55: 	dataset: dataset5.yaml
+2021-10-22 21:17:55: 	workers: 9
+2021-10-22 21:17:55: 	cache: ram
+2021-10-22 21:17:55: 	data_augmentation: True
+2021-10-22 21:17:55: 	tensorboard: True
+2021-10-22 21:17:55: 	random_seed: 42
+2021-10-22 21:17:55: 	optimizer: RMSProp
+2021-10-22 21:17:55: 	adam_beta1: 0.9
+2021-10-22 21:17:55: 	adam_beta2: 0.999
+2021-10-22 21:17:55: 	vit_blocks: 8
+2021-10-22 21:17:55: 	vit_dim: 512
+2021-10-22 21:17:55: 	consistency_term: True
+2021-10-22 21:17:55: 	M: 0
+2021-10-22 21:17:55: 	learning_rate: 7.5e-05
+2021-10-22 21:17:55: 	pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp33/weights/last.pt
+2021-10-22 21:17:55: 	pretrained_weights: False
+2021-10-22 21:17:55: 	pretrained_weights_generator: True
+2021-10-22 21:17:55: 	pretrained_weights_critic: False
+2021-10-22 21:17:55: 	pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp33/weights/generator_best.pt
+2021-10-22 21:17:55: 	pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
+2021-10-22 21:17:55: 	critic: Critic3_CT_WGAN
+2021-10-22 21:17:55: 	generator_learning_rate: 2.5e-06
+2021-10-22 21:17:55: 	critic_learning_rate: 3e-05
+2021-10-22 21:17:55: 	n_critic: 5
+2021-10-22 21:17:55: Found device: cuda:0
+2021-10-22 21:17:55: Transforms dict load succesfully
+2021-10-22 21:17:55: Data augmentation dict load succesfully
+2021-10-22 21:18:37: Dataset load succesfully
+2021-10-22 21:18:38: Generator UNetpp load succesfully
+2021-10-22 21:18:38: Critic Critic3_CT_WGAN load succesfully
+2021-10-22 21:18:38: Pretained weights of generator load succesfully

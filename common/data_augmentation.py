@@ -21,7 +21,7 @@ class AugmentationPipeline:
         ])
 
         self.color_aug = iaa.Sequential([
-            iaa.MultiplyAndAddToBrightness(mul=(0.8, 1.2), add=(-20, 20)),
+            iaa.MultiplyAndAddToBrightness(mul=(1., 1.), add=(0, 0)),
             #iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 11))),
             #iaa.AddToHueAndSaturation((-50, 50)),
             #iaa.HistogramEqualization()

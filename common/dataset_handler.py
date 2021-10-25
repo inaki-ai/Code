@@ -6,6 +6,8 @@ import numpy as np
 from torchvision import transforms
 import yaml
 import cv2
+from torchvision import transforms
+import PIL
 
 
 class Set(torch.utils.data.Dataset):
@@ -37,11 +39,13 @@ class Set(torch.utils.data.Dataset):
                 #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
                 mask = Image.open(self.data.iloc[idx, 1]).convert("L")
 
-                image = np.array(image)
-                #image = cv2.resize(image, (128,128))
-
-                image = cv2.bilateralFilter(image, 15, 50, 50)
-                image = Image.fromarray(image)
+                if True:
+                    image = np.array(image)
+                    image = cv2.bilateralFilter(image, 15, 50, 50)
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    image = cv2.equalizeHist(image).astype(np.float32)
+                    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
+                    image = Image.fromarray(image.astype(np.uint8))
 
                 self.images.append((image, mask))
 
@@ -85,15 +89,28 @@ class Set(torch.utils.data.Dataset):
             image, mask = self.augmentation_pipeline(image, mask)
 
         # Must be PIL images
-        if self.transform:
+        if self.transform and False:
             image = self.transform(image)
             mask = self.transform(mask)
 
-        to_tensor = transforms.ToTensor()
+        t1 = transforms.Resize((128, 128), interpolation=PIL.Image.NEAREST)
+        t2 = transforms.ToTensor()
+        #t3 = transforms.Normalize(mean=0.485, std=0.225)
+
+        image = t1(image)
+        mask = t1(mask)
+
+        image = t2(image)
+        mask = t2(mask)
+
+        #image = t3(image)
+        image = image.sub_(0.485).div_(0.225)
+
+        #to_tensor = transforms.ToTensor()
 
         sample = {
-          "image": to_tensor(image),
-          "mask": to_tensor(mask),
+          "image": image,
+          "mask": mask,
           "class": Class,
           "filename": filename
         }

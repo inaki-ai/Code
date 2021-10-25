@@ -19,7 +19,7 @@ from models.critics.critic import Critic1, Critic2, Critic3_CT_WGAN
 
 from common.hyperparameters import HyperparameterReader
 from common.dataset_handler import load_dataset
-from common.image_transformations import load_img_transforms
+from common.image_transformations import load_img_transforms, UnNormalize
 from common.data_augmentation import load_data_augmentation_pipes
 from common.utils import check_experiments_folder, check_runs_folder
 from common.segmentation_metrics import get_evaluation_metrics
@@ -129,6 +129,8 @@ class WGanTrainer:
         else:
             self.writer = None
 
+        self.un_normalizer = UnNormalize(mean=0.485, std=0.225)
+
         self.dsc_best =  -1
 
 
@@ -140,7 +142,7 @@ class WGanTrainer:
         np.random.seed(random_seed)
 
 
-    def load_weights(self, generator):
+    def load_weights(self, generator=True):
         try:
             if generator:
                 self.generator.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_generator"]))
@@ -392,6 +394,7 @@ class WGanTrainer:
         print("\tPrecision-recall AUC: {:.4f}".format(metrics.precision_recall_auc))
         print("\tHausdorf error: {:.4f}".format(metrics.hausdorf_error))
         print("----------------------------------------------------------------------------")
+        print(f"Segmentations saved at {self.experiment_folder}/segmentations")
 
 
     def LOG(self, msg):

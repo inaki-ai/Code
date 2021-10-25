@@ -9,6 +9,9 @@ import warnings
 warnings.filterwarnings("ignore")
 from common.progress_logger import ProgressLogger
 from hausdorff import hausdorff_distance
+from common.utils import generate_output_img
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class SegmentationEvaluationMetrics:
@@ -96,7 +99,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
     if not epoch == -1:
         save_folder = os.path.join(folder, f"epoch_{epoch}")
     else:
-        save_folder = os.path.join(folder, "validation")
+        save_folder = os.path.join(folder, "segmentations")
 
     if SAVE_SEGS and (epoch % N_EPOCHS_SAVE == 0 or epoch == -1):
         if not os.path.isdir(save_folder):
@@ -123,6 +126,9 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
     segmentor.eval()
 
+    with open(os.path.join(folder, 'metrics.csv'), 'w') as file:
+        file.write('image_id,ccr,precision,recall,specififty,f1_score,jaccard,dsc,roc_auc,pr_auc\n')
+
     with torch.no_grad():
 
         for i, batched_sample in enumerate(dataloader):
@@ -132,6 +138,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
             hard_sigmoid = nn.Hardsigmoid()
             segmentations = hard_sigmoid(segmentor(images))
+            segmentation_values = segmentations
             segmentations = torch.autograd.Variable((segmentations > 0.5).float())
 
             trans = transforms.ToPILImage()
@@ -139,6 +146,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
             for j in range(images.shape[0]):
                 image, mask = images[j].to("cpu"), masks[j].to("cpu")
                 segmentation = segmentations[j].to("cpu")
+                segmentation_val = segmentation_values[j].to("cpu")
                 name = filenames[j].split('/')[-1]
 
                 FP, FN, TP, TN = get_conf_mat(segmentation.numpy(), mask.numpy())
@@ -165,6 +173,9 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
                 hausdorf_error = compute_hausdorff_dist(segmentation.numpy(), mask.numpy())
 
+                with open(os.path.join(folder, 'metrics.csv'), 'a') as file:
+                    file.write(f'{name},{ccr},{precision},{recall},{specifity},{f1_score},{jaccard_coef},{dice_coeff},{roc_auc},{precision_recall_auc}\n')
+
                 ccrs.append(ccr)
                 precisions.append(precision)
                 recalls.append(recall)
@@ -179,14 +190,16 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
 
                 if SAVE_SEGS and (epoch % N_EPOCHS_SAVE == 0 or epoch == -1):
 
-                    image_save = trans(image)
+                    image_save = trans(image.mul_(0.225).add_(0.485))
                     mask_save = trans(mask)
                     segmentation_save = trans(segmentation)
+                    segmentation_save_vals = trans(segmentation_val)
 
                     opencv_image = np.array(image_save)
                     opencv_image = opencv_image[:, :, ::-1].copy()
                     opencv_gt = np.array(mask_save)
                     opencv_segmentation = np.array(segmentation_save)
+                    opencv_segmentation_vals = np.array(segmentation_save_vals)
 
                     if not COLOR:
                         img = np.vstack(
@@ -203,7 +216,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         opencv_segmentation = cv2.resize(opencv_segmentation, (512, 512))
                         opencv_segmentation = (opencv_segmentation > 0.5).astype(np.float32)
                         """
-
+                        """
                         contours_gt, _ = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                         contours_seg, _ = cv2.findContours(opencv_segmentation, cv2.RETR_TREE,
                                                                   cv2.CHAIN_APPROX_SIMPLE)
@@ -214,6 +227,28 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         opencv_image = cv2.resize(opencv_image, (512, 512))
 
                         cv2.imwrite(os.path.join(save_folder, f"{name}"), opencv_image)
+                        
+                        print(opencv_image.shape)
+                        print(opencv_gt.shape)
+                        print(opencv_segmentation_vals.shape)
+                        print()
+                        print(np.max(opencv_image))
+                        print(np.max(opencv_gt))
+                        print(np.max(opencv_segmentation_vals))
+                        print()
+                        print()
+                        """
+
+                        #opencv_image = self.un_normalizer(opencv_image)
+                        #opencv_image = (opencv_image * 0.225) + 0.485
+
+                        save_image = generate_output_img(opencv_image, opencv_gt, opencv_segmentation_vals)
+
+                        font = cv2.FONT_HERSHEY_SIMPLEX
+                        cv2.putText(save_image,f'DSC: {dice_coeff:.3f}', (512+50, 480), font, 1, (0,0,255), 2)
+
+                        cv2.imwrite(os.path.join(save_folder, f"{name}"), save_image)
+
 
         ccrs = np.array(ccrs)[~np.isnan(np.array(ccrs))]
         precisions = np.array(precisions)[~np.isnan(np.array(precisions))]
@@ -261,6 +296,17 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
         std_hausdorf_error = np.std(np.array(hausdorf_errors))
 
         segmentor.train()
+
+        with open(os.path.join(folder, 'avg_metrics.txt'), 'w') as file:
+            file.write(f"CCR: {mean_ccr:.3f} +- {std_ccr:.3f}\n")
+            file.write(f"Precision: {mean_precision:.3f} +- {std_precision:.3f}\n")
+            file.write(f"Recall: {mean_recall:.3f} +- {std_recall:.3f}\n")
+            file.write(f"Specifity: {mean_specifity:.3f} +- {std_specifity:.3f}\n")
+            file.write(f"F1 score: {mean_f1_score:.3f} +- {std_f1_score:.3f}\n")
+            file.write(f"Jaccard: {mean_jaccard_coef:.3f} +- {std_jaccard_coef:.3f}\n")
+            file.write(f"DSC: {mean_dice_coeff:.3f} +- {std_dice_coeff:.3f}\n")
+            file.write(f"ROC AUC: {mean_roc_auc:.3f} +- {std_roc_auc:.3f}\n")
+            file.write(f"PR AUC: {precision_recall_auc:.3f} +- {std_hausdorf_error:.3f}\n")
 
         if writer is not None:
             writer.add_scalar("Metrics/ccr", mean_ccr, epoch)

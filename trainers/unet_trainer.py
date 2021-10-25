@@ -6,12 +6,14 @@ from datetime import datetime
 import mlflow
 from mlflow.tracking.fluent import set_experiment
 import numpy as np
+import cv2
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
+from torchvision import transforms
 
 from models.segmentors.unet import UNet, UNet2
 from models.segmentors.rdau_net import RDAU_NET
@@ -20,11 +22,12 @@ from self_attention_cv.transunet import TransUnet
 
 from common.hyperparameters import HyperparameterReader
 from common.dataset_handler import load_dataset
-from common.image_transformations import load_img_transforms
+from common.image_transformations import load_img_transforms, UnNormalize
 from common.data_augmentation import load_data_augmentation_pipes
 from common.utils import torch_dice_loss, check_experiments_folder, check_runs_folder
 from common.segmentation_metrics import get_evaluation_metrics
 from common.progress_logger import ProgressBar
+from common.utils import generate_output_img
 
 import mlflow
 
@@ -104,6 +107,8 @@ class UnetTrainer:
         else:
             self.writer = None
 
+        self.un_normalizer = UnNormalize(mean=0.485, std=0.225)
+
         self.dsc_best =  -1
 
 
@@ -166,12 +171,24 @@ class UnetTrainer:
             images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
                             batched_sample["mask"].to(self.parameter_dict["device"])
 
+            filenames = batched_sample["filename"]
+
+            if self.parameter_dict['adversarial_training']:
+                images.requires_grad = True
+
             output = self.model(images)
 
             loss = self.compute_loss(output, masks)
 
             avg_loss += loss.item()
 
+            if self.parameter_dict['adversarial_training']:
+                loss.backward(retain_graph=True)
+                images_grad = images.grad.data
+                perturbed_images = self.fgsm_attack(images, images_grad, epsilon=self.parameter_dict['epsilon'])
+                output = self.model(perturbed_images)
+                loss = self.compute_loss(output, masks)
+            
             loss.backward()
             self.optimizer.step()
 
@@ -231,7 +248,7 @@ class UnetTrainer:
 
             metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.model,
                                     self.parameter_dict["device"], writer=self.writer,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=20, folder=f"{self.experiment_folder}/segmentations")
+                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations")
 
             mlflow.log_metric("CCR", metrics.CCR, step=epoch)
             mlflow.log_metric("Precision", metrics.precision, step=epoch)
@@ -296,6 +313,120 @@ class UnetTrainer:
         print(f"Segmentations saved at {self.experiment_folder}/segmentations")
 
     
+    @staticmethod
+    def fgsm_attack(image, data_grad, epsilon=0.01):
+
+        # Collect the element-wise sign of the data gradient
+        sign_data_grad = data_grad.sign()
+        # Create the perturbed image by adjusting each pixel of the input image
+        perturbed_image = image + epsilon*sign_data_grad
+        # Adding clipping to maintain [0,1] range
+        perturbed_image = torch.clamp(perturbed_image, -2, 2)
+        # Return the perturbed image
+        return perturbed_image
+
+
+    def generate_adversarial_examples(self):
+
+        self.load_weights()
+        self.model.eval()
+
+        trans = transforms.ToPILImage()
+
+        for i, batched_sample in enumerate(self.dataset.testset_loader):
+
+            images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
+                            batched_sample["mask"].to(self.parameter_dict["device"])
+
+            filenames = batched_sample["filename"]
+
+            images.requires_grad = True
+
+            output = self.model(images)
+
+            loss = self.compute_loss(output, masks)
+
+            self.model.zero_grad()
+
+            # Calculate gradients of model in backward pass
+            loss.backward()
+
+            perturbed_data = self.fgsm_attack(images, images.grad.data)
+            output = self.model(perturbed_data)
+
+            hard_sigmoid = nn.Hardsigmoid()
+            output = hard_sigmoid(output)
+
+            for j in range(perturbed_data.shape[0]):
+                image, mask = perturbed_data[j].to("cpu"), masks[j].to("cpu")
+                segmentation = output[j].to("cpu")
+                mask_save = trans(mask)
+                name = filenames[j].split('/')[-1]
+
+                image_save = trans(image.mul_(0.225).add_(0.485))
+                segmentation_save = trans(segmentation)
+
+                opencv_image = np.array(image_save)
+                opencv_image = opencv_image[:, :, ::-1].copy()
+                opencv_gt = np.array(mask_save)
+                opencv_segmentation = np.array(segmentation_save)
+
+                save_image = generate_output_img(opencv_image, opencv_gt, opencv_segmentation)
+                cv2.imwrite(os.path.join('/workspace/shared_files/pruebas', f"{name}"), save_image)
+
+
+        """
+            def train_step(self):
+
+        self.model.train()
+        avg_loss = 0
+
+        print("Train step")
+        bar = ProgressBar(len(self.dataset.trainset_loader))
+        
+        for i, batched_sample in enumerate(self.dataset.trainset_loader):
+
+            self.optimizer.zero_grad()
+
+            images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
+                            batched_sample["mask"].to(self.parameter_dict["device"])
+
+            filenames = batched_sample["filename"]
+
+            if self.parameter_dict['adversarial_training']:
+                images.requires_grad = True
+
+            output = self.model(images)
+
+            loss = self.compute_loss(output, masks)
+
+            avg_loss += loss.item()
+
+            if self.parameter_dict['adversarial_training']:
+                loss.backward(retain_graph=True)
+                images_grad = images.grad.data
+                perturbed_images = self.fgsm_attack(images, images_grad)
+                output = self.model(perturbed_images)
+                loss = self.compute_loss(output, masks)
+
+                for j in range(perturbed_images.shape[0]):
+                    image, mask = perturbed_images[j].to("cpu"), masks[j].to("cpu")
+                    segmentation = output[j].to("cpu")
+                    name = filenames[j].split('/')[-1]
+                    trans = trans = transforms.ToPILImage()
+                    image_save = trans(image.mul_(0.225).add_(0.485))
+                    mask_save = trans(mask)
+                    
+                    # guardar
+            
+            loss.backward()
+            self.optimizer.step()
+
+            bar.step_bar()
+
+        return avg_loss / len(self.dataset.trainset_loader)
+        """
+
     def LOG(self, msg):
 
         file = os.path.join(self.experiment_folder, "log.txt")

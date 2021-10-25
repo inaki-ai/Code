@@ -21,19 +21,23 @@ vit_dim: 512
 consistency_term: True
 M: 0
 
+adversarial_training: True
+epsilon: 0.01
+
 # Unet trainers
-learning_rate: 0.000075
-pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp22/weights/best.pt
+learning_rate: 0.000025
+pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp39/weights/last.pt
 pretrained_weights: False
 
 # Unet with WGan trainers
 pretrained_weights_generator: True
 pretrained_weights_critic: False
-pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp22/weights/last.pt
+#pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp33/weights/last.pt
+pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp33/weights/generator_best.pt
 pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
 critic: Critic3_CT_WGAN # Critic1, Critic2, Critic3_CT_WGAN
 
-generator_learning_rate: 0.000005
+generator_learning_rate: 0.0000025
 critic_learning_rate: 0.00003
 
 n_critic: 5

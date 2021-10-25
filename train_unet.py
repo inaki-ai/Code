@@ -14,6 +14,7 @@ def main():
     with mlflow.start_run():
         unet_trainer = UnetTrainer("hyperparameters.yaml")
         unet_trainer.train()
+        #unet_trainer.generate_adversarial_examples()
 
 
 if __name__ == '__main__':

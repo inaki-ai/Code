@@ -1,11 +1,18 @@
 from trainers.unet_trainer import UnetTrainer
 import os
-
+import mlflow
+import yaml
 
 def main():
 
-    unet_trainer = UnetTrainer("hyperparameters.yaml")
-    unet_trainer.test()
+    file = open("hyperparameters/hyperparameters.yaml", 'r')
+    parameter_dict = yaml.safe_load(file)
+
+    mlflow.set_experiment(parameter_dict["net"])
+
+    with mlflow.start_run():
+        unet_trainer = UnetTrainer("hyperparameters.yaml")
+        unet_trainer.test()
 
 
 if __name__ == '__main__':

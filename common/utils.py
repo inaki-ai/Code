@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import os
+import numpy as np
+import cv2
 
 def merge_images_with_masks(images, masks):
 
@@ -81,24 +83,59 @@ def check_runs_folder(exp_folder):
     os.mkdir(f"runs/{exp_folder}")
     return f"runs/{exp_folder}/{exp_folder}"
 
-from scipy.ndimage.filters import uniform_filter
-from scipy.ndimage.measurements import variance
-import cv2
 
-def lee_filter(img, size):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img_mean = uniform_filter(img, (size, size))
-    img_sqr_mean = uniform_filter(img**2, (size, size))
-    img_variance = img_sqr_mean - img_mean**2
+def generate_output_img(image, gt, segmentation):
 
-    overall_variance = variance(img)
+    GT_COLOUR = (0., 1., 0.)
+    SEG_COLOUR = (0., 0., 1.)
+    GT_SEG_COLOUR = (0., 1., 1.)
+    ALPHA = 0.57
+    ALPHA2 = 0.
 
-    img_weights = img_variance / (img_variance + overall_variance)
-    img_output = img_mean + img_weights * (img - img_mean)
+    if np.max(image) > 1. and False:
+        cv2.imwrite("img.png", image)
+        image = image.astype(np.float32)
+        cv2.imwrite("img2.png", image)
+        image /= 255.
+        cv2.imwrite("img3.png", image.astype(np.float32))
 
-    img_output = cv2.cvtColor(img_output, cv2.COLOR_GRAY2BGR)
+    if np.max(gt) > 1.:
+        gt = gt.astype(np.float32)
+        gt /= 255.
 
-    return img_output
+    if np.max(segmentation) > 1.:
+        segmentation = segmentation.astype(np.float32)
+        segmentation /= 255.
+
+    binary_segmentation = np.zeros_like(segmentation)
+    binary_segmentation[segmentation >= 0.5] = 1
+    
+    gt_seg_intersect_mask = gt * binary_segmentation
+
+    paint_mask = np.zeros_like(image)
+    paint_mask[gt_seg_intersect_mask == 1., :] = GT_SEG_COLOUR
+    paint_mask[(gt == 1.) & (gt_seg_intersect_mask == 0.)] = GT_COLOUR
+    paint_mask[(binary_segmentation == 1.) & (gt_seg_intersect_mask == 0.)] = SEG_COLOUR
+    paint_mask[(paint_mask[:, :, 2] == 0.) & (binary_segmentation == 1.), :] = SEG_COLOUR
+
+    image_painted_with_segs = np.copy(image)
+    cond = (binary_segmentation == 1.) | (gt == 1.)
+    image_painted_with_segs[cond, :] = ALPHA * image_painted_with_segs[cond, :] + (1-ALPHA) * paint_mask[cond] * 255.0
+
+    ########################################################################################
+
+    segmentation = (segmentation * 255).astype(np.uint8)
+    heatmap_seg = cv2.applyColorMap(segmentation, cv2.COLORMAP_JET)
+
+    heatmap_image = ALPHA2 * image + (1-ALPHA2) * heatmap_seg
+
+    image_painted_with_segs = cv2.resize(image_painted_with_segs, (512, 512))
+    heatmap_image = cv2.resize(heatmap_image, (512, 512))
+
+    concated_images = np.hstack([image_painted_with_segs, heatmap_image])
+    
+    return concated_images
+
 
 if __name__ == '__main__':
     import cv2
