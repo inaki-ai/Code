@@ -1,11 +1,11 @@
 ---
 # Common
-net: UNetpp # UNet, RDAUNet, UNet2, UNetpp, TransUNet
+net: TransUNet # UNet, RDAUNet, UNet2, UNetpp, TransUNet
 bilinear: True
 n_epochs: 3000
-batch_size: 128
+batch_size: 64
 dataset: dataset6.yaml
-workers: 9
+workers: 30
 cache: ram # ram or disk
 data_augmentation: True
 tensorboard: False
@@ -25,16 +25,15 @@ adversarial_training: True
 epsilon: 0.025
 
 remote: True
-change_string: /workspace/shared_files/
-new_string: /home/imartinez/
-#new_string: D:\
+change_string: /workspace/shared_files
+new_string: /home/imartinez
 multi_gpu: False
 device: 'cuda:3'
 mlflow: False
 
 # Unet trainers
 learning_rate: 0.000085
-pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp39/weights/last.pt
+pretrained_weights_path: /home/imartinez/Code/experiments/exp5/weights/last.pt
 pretrained_weights: False
 
 # Unet with WGan trainers
@@ -49,11 +48,3 @@ generator_learning_rate: 0.0000025
 critic_learning_rate: 0.00003
 
 n_critic: 5
-
-# Image generation
-image_generator: ImageGenerator1
-
-pretrained_weights_path_image_generator: /
-pretrained_image_weights_generator: False
-
-latent_vector_size: 100

@@ -18,7 +18,7 @@ class Set(torch.utils.data.Dataset):
     indexar (ej: dataset[i])
     """
 
-    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk"):
+    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk", remote=False, replacement=("", "")):
         """
         En el constructor simplemente se almecenan los datos
 
@@ -32,12 +32,22 @@ class Set(torch.utils.data.Dataset):
         self.cache = cache
         self.transform = transform
 
+        self.remote = remote
+        self.replacement = replacement
+        
         if self.cache == "ram":
             self.images = []
             for idx in range(len(self.data)):
-                image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
-                #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
-                mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+                
+                if remote:
+                    img_filename = self.data.iloc[idx, 0].replace(replacement[0], replacement[1])
+                    mask_filename = self.data.iloc[idx, 1].replace(replacement[0], replacement[1])
+                    image = Image.open(img_filename).convert("RGB")
+                    mask = Image.open(mask_filename).convert("L")
+                else:
+                    image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+                    #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
+                    mask = Image.open(self.data.iloc[idx, 1]).convert("L")
 
                 if True:
                     image = np.array(image)
@@ -71,10 +81,16 @@ class Set(torch.utils.data.Dataset):
         if self.cache == "ram":
             image, mask = self.images[idx]
         else:
-        # PIL images
-            image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
-            #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
-            mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+            if self.remote:
+                img_filename = self.data.iloc[idx, 0].replace(self.replacement[0], self.replacement[1])
+                mask_filename = self.data.iloc[idx, 1].replace(self.replacement[0], self.replacement[1])
+                image = Image.open(img_filename).convert("RGB")
+                mask = Image.open(mask_filename).convert("L")
+            else:
+                image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+                #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
+                mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+
 
         if "malignant" in self.data.iloc[idx, 0]:
           Class = "malignant"
@@ -104,7 +120,7 @@ class Set(torch.utils.data.Dataset):
         mask = t2(mask)
 
         #image = t3(image)
-        image = image.sub_(0.485).div_(0.225)
+        image = image.sub_(0.5).div_(0.5)
 
         #to_tensor = transforms.ToTensor()
 
@@ -121,17 +137,17 @@ class Set(torch.utils.data.Dataset):
 
 class DataSet():
 
-    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache):
+    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache, remote=False, replacement=("", "")):
 
         file = open(dataset_file, 'r')
         dataset_files = yaml.safe_load(file)
 
         self.trainset = Set(dataset_files["train"], "train", transforms["train"],
-                            augmentation_pipelines["train"], cache)
+                            augmentation_pipelines["train"], cache, remote, replacement)
         self.valset = Set(dataset_files["val"], "val", transforms["val"],
-                            augmentation_pipelines["val"], cache)
+                            augmentation_pipelines["val"], cache, remote, replacement)
         self.testset = Set(dataset_files["test"], "test", transforms["test"],
-                            augmentation_pipelines["test"], cache)
+                            augmentation_pipelines["test"], cache, remote, replacement)
 
         self.batchsize = batchsize
         self.workers = workers
@@ -163,7 +179,9 @@ def load_dataset(parameter_dict, print_info=True):
         raise Exception(f"Dataset file {dataset_file} does not exist")
 
     dataset = DataSet(dataset_file, transforms,
-                      augmentation_pipelines, batchsize, workers, cache)
+                      augmentation_pipelines, batchsize, workers, cache,
+                      remote=parameter_dict['remote'],
+                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']))
 
     if print_info:
         print("-----------------------------------------------------------------")

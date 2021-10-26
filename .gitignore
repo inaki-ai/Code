@@ -123,6 +123,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+experiments
+runs
 *.png
 *tfevents*
 *.pt

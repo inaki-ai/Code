@@ -11,17 +11,17 @@ class AugmentationPipeline:
             iaa.Flipud(0.25),
             #iaa.Sometimes(0.5, iaa.PiecewiseAffine(scale=(0.05, 0.05))),
             #iaa.geometric.Affine(scale=0.8),
-            iaa.Sometimes(0.5,
+            iaa.Sometimes(0.25,
                             iaa.geometric.ElasticTransformation(alpha=(0, 70.0),
                                                                 sigma=(4.0, 6.0))),
             #iaa.Sometimes(0.5,
             #              iaa.Sequential([iaa.CropToFixedSize(width=110, height=110),
             #                              iaa.Resize((128, 128))])),
-            iaa.Affine(rotate=(-10, 10), mode='symmetric'),
+            iaa.Affine(rotate=(-20, 20), mode='symmetric'),
         ])
 
         self.color_aug = iaa.Sequential([
-            iaa.MultiplyAndAddToBrightness(mul=(1., 1.), add=(0, 0)),
+            iaa.MultiplyAndAddToBrightness(mul=(0.8, 1.2), add=(-25, 25)),
             #iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 11))),
             #iaa.AddToHueAndSaturation((-50, 50)),
             #iaa.HistogramEqualization()

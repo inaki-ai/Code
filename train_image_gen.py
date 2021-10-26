@@ -1,6 +1,7 @@
-from trainers.unet_trainer import UnetTrainer
+from trainers.new_data_generator_trainer import DataGenerator
 import os
 import yaml
+
 
 def main():
 
@@ -8,16 +9,18 @@ def main():
     parameter_dict = yaml.safe_load(file)
 
     if parameter_dict['mlflow']:
+
         import mlflow
-        
-        mlflow.set_experiment(parameter_dict["net"])
+
+        mlflow.set_experiment(parameter_dict["net"] + " WGAN")
 
         with mlflow.start_run():
-            unet_trainer = UnetTrainer("hyperparameters.yaml")
-            unet_trainer.test()
+            data_generator = DataGenerator("hyperparameters.yaml")
+            data_generator.train()
+
     else:
-        unet_trainer = UnetTrainer("hyperparameters.yaml")
-        unet_trainer.test()
+        data_generator = DataGenerator("hyperparameters.yaml")
+        data_generator.train()
 
 
 if __name__ == '__main__':
