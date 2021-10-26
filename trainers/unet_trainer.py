@@ -3,8 +3,6 @@ import os
 import random
 import imgaug
 from datetime import datetime
-import mlflow
-from mlflow.tracking.fluent import set_experiment
 import numpy as np
 import cv2
 
@@ -29,29 +27,39 @@ from common.segmentation_metrics import get_evaluation_metrics
 from common.progress_logger import ProgressBar
 from common.utils import generate_output_img
 
-import mlflow
 
 class UnetTrainer:
 
     def __init__(self, hyperparams_file):
+        
 
         self.experiment_folder = check_experiments_folder()
 
         hyperparameter_loader = HyperparameterReader(hyperparams_file)
         self.parameter_dict = hyperparameter_loader.load_param_dict()
-
-        mlflow.set_tag('Exp', self.experiment_folder)
-        mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
+        
+        if self.parameter_dict['mlflow']:
+            import mlflow
+            from mlflow.tracking.fluent import set_experiment
+            
+            mlflow.set_tag('Exp', self.experiment_folder)
+            mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
 
         self.LOG("Launching UnetTrainer...")
         self.LOG("Hyperparameters succesfully read from {hyperparams_file}:")
         for key, val in self.parameter_dict.items():
             self.LOG(f"\t{key}: {val}")
-            mlflow.log_param(key, val)
+            
+            if self.parameter_dict['mlflow']:
+                mlflow.log_param(key, val)
 
         self.set_random_seed(self.parameter_dict["random_seed"])
 
-        self.parameter_dict["device"] = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+        if self.parameter_dict['device'] is False:
+            self.parameter_dict["device"] = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+            
+        if self.parameter_dict['multi_gpu']:
+            self.parameter_dict["device"] = torch.device('cuda')
 
         self.LOG("Found device: {}".format(self.parameter_dict["device"]))
 
@@ -86,7 +94,8 @@ class UnetTrainer:
         else:
             #TODO
             pass
-        
+        if self.parameter_dict['multi_gpu']:
+            self.model = nn.DataParallel(self.model)
 
         self.LOG("Model {} load succesfully".format(self.parameter_dict["net"]))
 
@@ -235,8 +244,9 @@ class UnetTrainer:
             end = time.time()
             elapsed = end - start
 
-            mlflow.log_metric("train_loss", train_loss)
-            mlflow.log_metric("val_loss", val_loss)
+            if self.parameter_dict['mlflow']:
+                mlflow.log_metric("train_loss", train_loss)
+                mlflow.log_metric("val_loss", val_loss)
 
             msg = f"Epoch {epoch} finished -- Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f} -- Elapsed time: {elapsed:.1f}s"
             print(msg + "\n")
@@ -248,34 +258,36 @@ class UnetTrainer:
 
             metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.model,
                                     self.parameter_dict["device"], writer=self.writer,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations")
+                                    SAVE_SEGS=True, N_EPOCHS_SAVE=20, folder=f"{self.experiment_folder}/segmentations")
 
-            mlflow.log_metric("CCR", metrics.CCR, step=epoch)
-            mlflow.log_metric("Precision", metrics.precision, step=epoch)
-            mlflow.log_metric("Recall - Sensitivity", metrics.recall, step=epoch)
-            mlflow.log_metric("Specifity", metrics.specifity, step=epoch)
-            mlflow.log_metric("F1 score", metrics.f1_score, step=epoch)
-            mlflow.log_metric("Jaccard coef - IoU", metrics.jaccard, step=epoch)
-            mlflow.log_metric("Dice score - DSC", metrics.dice, step=epoch)
-            mlflow.log_metric("ROC AUC", metrics.roc_auc, step=epoch)
-            mlflow.log_metric("Precision-recall AUC", metrics.precision_recall_auc, step=epoch)
-            mlflow.log_metric("Hausdorf error", metrics.hausdorf_error, step=epoch)
+            if self.parameter_dict['mlflow']:
+                mlflow.log_metric("CCR", metrics.CCR, step=epoch)
+                mlflow.log_metric("Precision", metrics.precision, step=epoch)
+                mlflow.log_metric("Recall - Sensitivity", metrics.recall, step=epoch)
+                mlflow.log_metric("Specifity", metrics.specifity, step=epoch)
+                mlflow.log_metric("F1 score", metrics.f1_score, step=epoch)
+                mlflow.log_metric("Jaccard coef - IoU", metrics.jaccard, step=epoch)
+                mlflow.log_metric("Dice score - DSC", metrics.dice, step=epoch)
+                mlflow.log_metric("ROC AUC", metrics.roc_auc, step=epoch)
+                mlflow.log_metric("Precision-recall AUC", metrics.precision_recall_auc, step=epoch)
+                mlflow.log_metric("Hausdorf error", metrics.hausdorf_error, step=epoch)
             
             self.save_weights()
             self.LOG(f"Last weights saved at epoch {epoch}")
 
             if metrics.dice > self.dsc_best:
 
-                mlflow.log_metric("CCR_best", metrics.CCR, step=epoch)
-                mlflow.log_metric("Precision_best", metrics.precision, step=epoch)
-                mlflow.log_metric("Recall - Sensitivity_best", metrics.recall, step=epoch)
-                mlflow.log_metric("Specifity_best", metrics.specifity, step=epoch)
-                mlflow.log_metric("F1 score_best", metrics.f1_score, step=epoch)
-                mlflow.log_metric("Jaccard coef - IoU_best", metrics.jaccard, step=epoch)
-                mlflow.log_metric("Dice score - DSC_best", metrics.dice, step=epoch)
-                mlflow.log_metric("ROC AUC_best", metrics.roc_auc, step=epoch)
-                mlflow.log_metric("Precision-recall AUC_best", metrics.precision_recall_auc, step=epoch)
-                mlflow.log_metric("Hausdorf error_best", metrics.hausdorf_error, step=epoch)
+                if self.parameter_dict['mlflow']:
+                    mlflow.log_metric("CCR_best", metrics.CCR, step=epoch)
+                    mlflow.log_metric("Precision_best", metrics.precision, step=epoch)
+                    mlflow.log_metric("Recall - Sensitivity_best", metrics.recall, step=epoch)
+                    mlflow.log_metric("Specifity_best", metrics.specifity, step=epoch)
+                    mlflow.log_metric("F1 score_best", metrics.f1_score, step=epoch)
+                    mlflow.log_metric("Jaccard coef - IoU_best", metrics.jaccard, step=epoch)
+                    mlflow.log_metric("Dice score - DSC_best", metrics.dice, step=epoch)
+                    mlflow.log_metric("ROC AUC_best", metrics.roc_auc, step=epoch)
+                    mlflow.log_metric("Precision-recall AUC_best", metrics.precision_recall_auc, step=epoch)
+                    mlflow.log_metric("Hausdorf error_best", metrics.hausdorf_error, step=epoch)
 
                 self.LOG(f"New best value of DSC reach: {metrics.dice:.4f} (last: {self.dsc_best:.4f})")
                 self.dsc_best = metrics.dice
@@ -374,64 +386,12 @@ class UnetTrainer:
                 save_image = generate_output_img(opencv_image, opencv_gt, opencv_segmentation)
                 cv2.imwrite(os.path.join('/workspace/shared_files/pruebas', f"{name}"), save_image)
 
-
-        """
-            def train_step(self):
-
-        self.model.train()
-        avg_loss = 0
-
-        print("Train step")
-        bar = ProgressBar(len(self.dataset.trainset_loader))
-        
-        for i, batched_sample in enumerate(self.dataset.trainset_loader):
-
-            self.optimizer.zero_grad()
-
-            images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
-                            batched_sample["mask"].to(self.parameter_dict["device"])
-
-            filenames = batched_sample["filename"]
-
-            if self.parameter_dict['adversarial_training']:
-                images.requires_grad = True
-
-            output = self.model(images)
-
-            loss = self.compute_loss(output, masks)
-
-            avg_loss += loss.item()
-
-            if self.parameter_dict['adversarial_training']:
-                loss.backward(retain_graph=True)
-                images_grad = images.grad.data
-                perturbed_images = self.fgsm_attack(images, images_grad)
-                output = self.model(perturbed_images)
-                loss = self.compute_loss(output, masks)
-
-                for j in range(perturbed_images.shape[0]):
-                    image, mask = perturbed_images[j].to("cpu"), masks[j].to("cpu")
-                    segmentation = output[j].to("cpu")
-                    name = filenames[j].split('/')[-1]
-                    trans = trans = transforms.ToPILImage()
-                    image_save = trans(image.mul_(0.225).add_(0.485))
-                    mask_save = trans(mask)
-                    
-                    # guardar
-            
-            loss.backward()
-            self.optimizer.step()
-
-            bar.step_bar()
-
-        return avg_loss / len(self.dataset.trainset_loader)
-        """
-
     def LOG(self, msg):
 
         file = os.path.join(self.experiment_folder, "log.txt")
 
-        mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
+        if self.parameter_dict['mlflow']:
+            mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
 
         if not os.path.isfile(file):
             with open(file, 'w') as f:

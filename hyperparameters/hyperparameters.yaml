@@ -3,12 +3,12 @@
 net: UNetpp # UNet, RDAUNet, UNet2, UNetpp, TransUNet
 bilinear: True
 n_epochs: 3000
-batch_size: 16
-dataset: dataset5.yaml
-workers: 9
+batch_size: 32
+dataset: dataset6.yaml
+workers: 30
 cache: ram # ram or disk
 data_augmentation: True
-tensorboard: True
+tensorboard: False
 random_seed: 42
 
 optimizer: Adam # Adam, RMSProp
@@ -22,10 +22,17 @@ consistency_term: True
 M: 0
 
 adversarial_training: True
-epsilon: 0.01
+epsilon: 0.025
+
+remote: True
+change_string: /workspace/shared_files
+new_string: /home/imartinez
+multi_gpu: False
+device: 'cuda:3'
+mlflow: False
 
 # Unet trainers
-learning_rate: 0.000025
+learning_rate: 0.000085
 pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp39/weights/last.pt
 pretrained_weights: False
 
