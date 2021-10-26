@@ -54,20 +54,20 @@ class DataGenerator:
         self.dataset = load_dataset(self.parameter_dict)
 
         if self.parameter_dict["critic"] == "Critic1":
-            self.critic = Critic1(3).to(self.parameter_dict["device"])
+            self.critic = Critic1(4).to(self.parameter_dict["device"])
             self.critic.init_weights()
         elif self.parameter_dict["critic"] == "Critic2":
-            self.critic = Critic2(3).to(self.parameter_dict["device"])
+            self.critic = Critic2(4).to(self.parameter_dict["device"])
             self.critic.init_weights()
         elif self.parameter_dict["critic"] == "Critic3_CT_WGAN":
-            self.critic = Critic3_CT_WGAN(3).to(self.parameter_dict["device"])
+            self.critic = Critic3_CT_WGAN(4).to(self.parameter_dict["device"])
             self.critic.init_weights()
         else:
             #TODO
             pass
 
         if self.parameter_dict['image_generator'] == 'ImageGenerator1':
-            self.generator = ImageGenerator1()
+            self.generator = ImageGenerator1().to(self.parameter_dict["device"])
 
         if self.parameter_dict["optimizer"] == "Adam":
             self.optimizerG = optim.Adam(self.generator.parameters(), lr=self.parameter_dict["generator_learning_rate"],
@@ -130,6 +130,8 @@ class DataGenerator:
     @staticmethod
     def gradient_penalty(critic, real_segmentations, generated_segmentations, penalty, device):
 
+        assert real_segmentations.shape == generated_segmentations.shape
+        
         n_elements = real_segmentations.nelement()
         batch_size = real_segmentations.size()[0]
         colors = real_segmentations.size()[1]
@@ -139,6 +141,7 @@ class DataGenerator:
         alpha = alpha.view(batch_size, colors, image_width, image_height).to(device)
 
         fake_data = generated_segmentations.view(batch_size, colors, image_width, image_height)
+        #fake_data = generated_segmentations
         interpolates = alpha * generated_segmentations.detach() + ((1 - alpha) * fake_data.detach())
 
         interpolates = interpolates.to(device)
@@ -221,15 +224,14 @@ class DataGenerator:
 
         print("Train step")
         bar = ProgressBar(len(self.dataset.trainset_loader))
-        
-        print("A")
+
         for i, batched_sample in enumerate(self.dataset.trainset_loader):
-            print(f"B_{i}")
+
             images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
                             batched_sample["mask"].to(self.parameter_dict["device"])
 
-            images = torch.Variable(merge_images_with_masks(images, masks), requires_grad=True)
-            noise = torch.randn(self.parameter_dict['batch_size'], self.parameter_dict['latent_vector_size'], 1, 1)
+            images = torch.autograd.Variable(merge_images_with_masks(images, masks), requires_grad=True).to(self.parameter_dict['device'])
+            noise = torch.randn(images.shape[0], self.parameter_dict['latent_vector_size'], 1, 1).to(self.parameter_dict['device'])
 
             loss_C = self.critic_step(images, noise)
             C_avg_loss += loss_C.item()
