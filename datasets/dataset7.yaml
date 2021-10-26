@@ -1,0 +1,3 @@
+train: C:\Users\imartinez\Desktop\Code\datasets\Dataset5\train_dataset.csv
+val: C:\Users\imartinez\Desktop\Code\datasets\Dataset5\val_dataset.csv
+test: C:\Users\imartinez\Desktop\Code\datasets\Dataset5\test_dataset.csv
