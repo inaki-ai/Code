@@ -15,7 +15,7 @@ if __name__ == '__main__':
     DEVICE = 'cuda:0'
 
     model = ImageGenerator1().to(DEVICE)
-    model.load_state_dict(torch.load('experiments/exp1/weights/generator_last.pt', map_location=DEVICE))
+    model.load_state_dict(torch.load('generator_last.pt', map_location=DEVICE))
     
     noise = torch.randn(N_GENERATIONS, 100, 1, 1).to(DEVICE)
     

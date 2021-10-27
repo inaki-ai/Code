@@ -8,6 +8,7 @@ import yaml
 import cv2
 from torchvision import transforms
 import PIL
+from skimage.exposure import equalize_adapthist
 
 
 class Set(torch.utils.data.Dataset):
@@ -51,10 +52,11 @@ class Set(torch.utils.data.Dataset):
 
                 if True:
                     image = np.array(image)
-                    image = cv2.bilateralFilter(image, 15, 50, 50)
-                    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    image = cv2.equalizeHist(image).astype(np.float32)
-                    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
+                    image = cv2.bilateralFilter(image, 5, 115, 15)
+                    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    #image = cv2.equalizeHist(image).astype(np.float32)
+                    image = equalize_adapthist(image).astype(np.float32) * 255.
+                    #image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
                     image = Image.fromarray(image.astype(np.uint8))
 
                 self.images.append((image, mask))
@@ -90,6 +92,15 @@ class Set(torch.utils.data.Dataset):
                 image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
                 #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
                 mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+
+            if True:
+                    image = np.array(image)
+                    image = cv2.bilateralFilter(image, 5, 115, 15)
+                    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    #image = cv2.equalizeHist(image).astype(np.float32)
+                    image = equalize_adapthist(image).astype(np.float32) * 255.
+                    #image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
+                    image = Image.fromarray(image.astype(np.uint8))
 
 
         if "malignant" in self.data.iloc[idx, 0]:

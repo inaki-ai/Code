@@ -243,9 +243,11 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         #opencv_image = (opencv_image * 0.225) + 0.485
 
                         save_image = generate_output_img(opencv_image, opencv_gt, opencv_segmentation_vals)
+                        save_image = opencv_image
 
                         font = cv2.FONT_HERSHEY_SIMPLEX
-                        cv2.putText(save_image,f'DSC: {dice_coeff:.3f}', (512+50, 480), font, 1, (0,0,255), 2)
+                        #cv2.putText(save_image, f'DSC: {dice_coeff:.3f}', (512+50, 480), font, 1, (0,0,255), 2)
+                        save_image = cv2.resize(save_image, (512, 512))
 
                         cv2.imwrite(os.path.join(save_folder, f"{name}"), save_image)
 
