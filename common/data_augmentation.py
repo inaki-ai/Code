@@ -6,22 +6,29 @@ import cv2
 class AugmentationPipeline:
 
     def __init__(self):
+
+        self.p = 0.1
         self.spatial_aug = iaa.Sequential([
-            iaa.Fliplr(0.25),
-            iaa.Flipud(0.25),
+            iaa.Fliplr(0.5),
+            #iaa.Flipud(0.25),
             #iaa.Sometimes(0.5, iaa.PiecewiseAffine(scale=(0.05, 0.05))),
             #iaa.geometric.Affine(scale=0.8),
-            iaa.Sometimes(0.25,
+            iaa.Sometimes(0.1,
                             iaa.geometric.ElasticTransformation(alpha=(0, 70.0),
                                                                 sigma=(4.0, 6.0))),
             #iaa.Sometimes(0.5,
             #              iaa.Sequential([iaa.CropToFixedSize(width=110, height=110),
             #                              iaa.Resize((128, 128))])),
-            iaa.Affine(rotate=(-20, 20), mode='symmetric'),
+            iaa.Sometimes(self.p, iaa.Affine(rotate=(-20, 20), mode='symmetric')),
+            iaa.Sometimes(self.p, iaa.ScaleX((0.8, 1.2))),
+            iaa.Sometimes(self.p, iaa.ScaleY((0.8, 1.2))),
+            iaa.Sometimes(self.p, iaa.TranslateX(percent=(-0.15, 0.15))),
+            iaa.Sometimes(self.p, iaa.TranslateY(percent=(-0.15, 0.15)))
+
         ])
 
         self.color_aug = iaa.Sequential([
-            iaa.MultiplyAndAddToBrightness(mul=(0.8, 1.2), add=(-25, 25)),
+            iaa.MultiplyAndAddToBrightness(mul=(0.8, 1.2), add=(-15, 15)),
             #iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 11))),
             #iaa.AddToHueAndSaturation((-50, 50)),
             #iaa.HistogramEqualization()
