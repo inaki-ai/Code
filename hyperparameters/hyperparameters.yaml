@@ -2,16 +2,16 @@
 # Common
 net: UNetpp # UNet, RDAUNet, UNet2, UNetpp, TransUNet
 bilinear: True
-n_epochs: 3000
-batch_size: 16
-dataset: dataset5.yaml
-workers: 9
-cache: disk # ram or disk
+n_epochs: 30000
+batch_size: 128
+dataset: dataset6.yaml
+workers: 30
+cache: ram # ram or disk
 data_augmentation: True
 tensorboard: False
 random_seed: 42
 
-optimizer: Adam # Adam, RMSProp
+optimizer: RMSProp # Adam, RMSProp
 adam_beta1: 0.9
 adam_beta2: 0.999
 
@@ -45,12 +45,13 @@ pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/
 pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
 critic: Critic3_CT_WGAN # Critic1, Critic2, Critic3_CT_WGAN
 
-generator_learning_rate: 0.0000025
-critic_learning_rate: 0.00003
+generator_learning_rate: 0.00003
+critic_learning_rate: 0.000003
 
 n_critic: 5
 
 # Image generation
+generation: True
 image_generator: ImageGenerator1
 
 pretrained_weights_path_image_generator: /

@@ -1,4 +1,6 @@
 import torch.nn as nn
+from common.utils import *
+
 
 class ImageGenerator1(nn.Module):
     def __init__(self):
@@ -37,6 +39,10 @@ class ImageGenerator1(nn.Module):
 
     def forward(self, input):
         return self.main(input)
+    
+    def init_weights(self):
+
+        self.apply(weights_init)
 
 if __name__ == '__main__':
 

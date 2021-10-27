@@ -6,7 +6,6 @@ import numpy as np
 from torchvision import transforms
 import yaml
 import cv2
-from torchvision import transforms
 import PIL
 from skimage.exposure import equalize_adapthist
 
@@ -19,7 +18,7 @@ class Set(torch.utils.data.Dataset):
     indexar (ej: dataset[i])
     """
 
-    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk", remote=False, replacement=("", "")):
+    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk", remote=False, replacement=("", ""), generation=False):
         """
         En el constructor simplemente se almecenan los datos
 
@@ -35,6 +34,7 @@ class Set(torch.utils.data.Dataset):
 
         self.remote = remote
         self.replacement = replacement
+        self.generation = generation
         
         if self.cache == "ram":
             self.images = []
@@ -52,7 +52,7 @@ class Set(torch.utils.data.Dataset):
 
                 if True:
                     image = np.array(image)
-                    image = cv2.bilateralFilter(image, 5, 115, 15)
+                    image = cv2.bilateralFilter(image, 3, 10, 10)
                     #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     #image = cv2.equalizeHist(image).astype(np.float32)
                     image = equalize_adapthist(image).astype(np.float32) * 255.
@@ -92,6 +92,15 @@ class Set(torch.utils.data.Dataset):
                 image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
                 #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
                 mask = Image.open(self.data.iloc[idx, 1]).convert("L")
+                
+            if True:
+                image = np.array(image)
+                image = cv2.bilateralFilter(image, 5, 115, 15)
+                #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                #image = cv2.equalizeHist(image).astype(np.float32)
+                image = equalize_adapthist(image).astype(np.float32) * 255.
+                #image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
+                image = Image.fromarray(image.astype(np.uint8))
 
             if True:
                     image = np.array(image)
@@ -132,9 +141,12 @@ class Set(torch.utils.data.Dataset):
 
         #image = t3(image)
         image = image.sub_(0.5).div_(0.5)
+        
+        if self.generation:
+            image = torch.cat([image, mask], axis=0)
 
         #to_tensor = transforms.ToTensor()
-
+        
         sample = {
           "image": image,
           "mask": mask,
@@ -148,17 +160,17 @@ class Set(torch.utils.data.Dataset):
 
 class DataSet():
 
-    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache, remote=False, replacement=("", "")):
+    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache, remote=False, replacement=("", ""), generation=False):
 
         file = open(dataset_file, 'r')
         dataset_files = yaml.safe_load(file)
 
         self.trainset = Set(dataset_files["train"], "train", transforms["train"],
-                            augmentation_pipelines["train"], cache, remote, replacement)
+                            augmentation_pipelines["train"], cache, remote, replacement, generation)
         self.valset = Set(dataset_files["val"], "val", transforms["val"],
-                            augmentation_pipelines["val"], cache, remote, replacement)
+                            augmentation_pipelines["val"], cache, remote, replacement, generation)
         self.testset = Set(dataset_files["test"], "test", transforms["test"],
-                            augmentation_pipelines["test"], cache, remote, replacement)
+                            augmentation_pipelines["test"], cache, remote, replacement, generation)
 
         self.batchsize = batchsize
         self.workers = workers
@@ -192,7 +204,8 @@ def load_dataset(parameter_dict, print_info=True):
     dataset = DataSet(dataset_file, transforms,
                       augmentation_pipelines, batchsize, workers, cache,
                       remote=parameter_dict['remote'],
-                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']))
+                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']),
+                      generation=parameter_dict['generation'])
 
     if print_info:
         print("-----------------------------------------------------------------")

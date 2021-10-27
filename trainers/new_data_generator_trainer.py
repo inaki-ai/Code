@@ -68,6 +68,7 @@ class DataGenerator:
 
         if self.parameter_dict['image_generator'] == 'ImageGenerator1':
             self.generator = ImageGenerator1().to(self.parameter_dict["device"])
+            self.generator.init_weights()
 
         if self.parameter_dict["optimizer"] == "Adam":
             self.optimizerG = optim.Adam(self.generator.parameters(), lr=self.parameter_dict["generator_learning_rate"],
@@ -178,44 +179,6 @@ class DataGenerator:
 
         return penalty * d_wct_loss
 
-    def generator_step(self, noise):
-
-        self.optimizerG.zero_grad()
-
-        fake_images = self.generator(noise)
-
-        loss_G = -torch.mean(self.critic(fake_images))
-
-        loss_G.backward()
-        self.optimizerG.step()
-
-        return loss_G
-
-    def critic_step(self, images, noise):
-
-        self.optimizerC.zero_grad()
-
-        fake_images = self.generator(noise).detach()
-
-        loss_C = -torch.mean(self.critic(images)) + torch.mean(self.critic(fake_images))
-
-        _gradient_penalty = self.gradient_penalty(self.critic, images, fake_images,
-                                                  10, self.parameter_dict["device"])
-
-        loss_C += _gradient_penalty
-
-        if self.parameter_dict["consistency_term"]:
-            _consistency_term = self.consistency_term(self.critic, images,
-                                                    M=self.parameter_dict["M"], penalty=2,
-                                                    device=self.parameter_dict["device"])
-
-            loss_C += _consistency_term
-
-        loss_C.backward()
-
-        self.optimizerC.step()
-
-        return loss_C
 
     def train_step(self, forward_passed_batches):
         
@@ -230,31 +193,58 @@ class DataGenerator:
             images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
                             batched_sample["mask"].to(self.parameter_dict["device"])
 
-            images = torch.autograd.Variable(merge_images_with_masks(images, masks), requires_grad=True).to(self.parameter_dict['device'])
+            #images = torch.autograd.Variable(merge_images_with_masks(images, masks), requires_grad=True).to(self.parameter_dict['device'])
             noise = torch.randn(images.shape[0], self.parameter_dict['latent_vector_size'], 1, 1).to(self.parameter_dict['device'])
+            
+            ## Critic step
+            self.optimizerC.zero_grad()
+            fake_images = self.generator(noise).detach()
+            
+            loss_C = -torch.mean(self.critic(images)) + torch.mean(self.critic(fake_images))
+            
+            _gradient_penalty = self.gradient_penalty(self.critic, images, fake_images, 10, self.parameter_dict["device"])
 
-            loss_C = self.critic_step(images, noise)
+            loss_C += _gradient_penalty
+            
+            loss_C.backward()
+            self.optimizerC.step()
+            
             C_avg_loss += loss_C.item()
+            
             forward_passed_batches += 1
-
+            #####
+            
+            ## Generator step
             if forward_passed_batches == self.parameter_dict["n_critic"]:
-                loss_G = self.generator_step(noise)
-                G_avg_loss += loss_G.item()
-
                 forward_passed_batches = 0
+                
+                self.optimizerG.zero_grad()
+                generated_images = self.generator(noise)
+                
+                loss_G = -torch.mean(self.critic(generated_images))
+                
+                loss_G.backward()
+                self.optimizerG.step()
+                
+                G_avg_loss += loss_G.item()
+            #####
 
-            bar.step_bar()
+            bar.step_bar()  
 
         G_avg_loss /= len(self.dataset.trainset_loader)
         C_avg_loss /= len(self.dataset.trainset_loader)
 
         return G_avg_loss, C_avg_loss, forward_passed_batches
+                    
 
     def train(self):
 
         self.init_train_scheme()
 
         self.LOG("Starting training the model...")
+        
+        with(open(os.path.join(self.experiment_folder, 'loss.csv'), 'w')) as file:
+            file.write('Epoch,Generator,Critic\n')
 
         forward_passed_batches = 0
         for epoch in range(1, self.parameter_dict["n_epochs"]+1):
@@ -265,6 +255,9 @@ class DataGenerator:
             train_gen_loss, train_crit_loss, forward_passed_batches = self.train_step(forward_passed_batches)
             end = time.time()
             elapsed = end - start
+            
+            with(open(os.path.join(self.experiment_folder, 'loss.csv'), 'a')) as file:
+                file.write(f'{epoch},{train_gen_loss},{train_crit_loss}\n')
 
             if self.parameter_dict['mlflow']:
                 mlflow.log_metric("train_gen_loss", train_gen_loss)
@@ -283,6 +276,42 @@ class DataGenerator:
             
             self.save_weights()
             self.LOG(f"Last weights saved at epoch {epoch}")
+            
+            if epoch % 50 == 0:
+                
+                SAVE_FOLDER = f"generated/epoch {epoch}"
+                DEVICE = self.parameter_dict['device']
+                
+                if not os.path.isdir('generated'):
+                        os.mkdir('generated')
+                
+                noise = torch.randn(25, 100, 1, 1).to(DEVICE)
+                output = self.generator(noise)
+                
+                n_images = output.shape[0]
+    
+                trans = transforms.ToPILImage()
+        
+                for i in range(n_images):
+                
+                    mask = output[i, 3, :, :].detach().to('cpu')
+                    image = output[i, :3, :, :].detach().to('cpu')
+
+                    image = trans(image)
+                    mask = trans(mask)
+
+                    np_image = np.array(image)
+                    np_mask = np.array(mask)
+
+                    np_image = cv2.cvtColor(np_image, cv2.COLOR_BGR2GRAY)
+
+                    save_img = np.hstack([np_image, np_mask])
+
+                    if not os.path.isdir(SAVE_FOLDER):
+                        os.mkdir(SAVE_FOLDER)
+
+                    cv2.imwrite(os.path.join(SAVE_FOLDER, f"sample_{i}.png"), save_img)
+                
 
 
     def init_train_scheme(self):
