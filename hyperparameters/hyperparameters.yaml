@@ -2,11 +2,11 @@
 # Common
 net: UNetpp # UNet, RDAUNet, UNet2, UNetpp, TransUNet
 bilinear: True
-n_epochs: 30000
+n_epochs: 150
 batch_size: 16
-dataset: dataset5.yaml
+dataset: busi.yaml
 workers: 9
-cache: rams # ram or disk
+cache: ram # ram or disk
 data_augmentation: True
 tensorboard: True
 random_seed: 42
@@ -17,12 +17,6 @@ adam_beta2: 0.999
 
 vit_blocks: 8
 vit_dim: 512
-
-consistency_term: True
-M: 0
-
-adversarial_training: True
-epsilon: 0.007
 
 remote: False
 change_string: /workspace/shared_files/
@@ -35,7 +29,9 @@ mlflow: False
 # Unet trainers
 learning_rate: 0.000085
 pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp52/weights/last.pt
-pretrained_weights: True
+pretrained_weights: False
+adversarial_training: True
+epsilon: 0.007
 
 # Unet with WGan trainers
 pretrained_weights_generator: True
@@ -49,9 +45,10 @@ generator_learning_rate: 0.00003
 critic_learning_rate: 0.000003
 
 n_critic: 5
+consistency_term: True
+M: 0
 
 # Image generation
-generation: False
 image_generator: ImageGenerator1
 
 pretrained_weights_path_image_generator: /

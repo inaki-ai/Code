@@ -76,19 +76,19 @@ class UnetTrainer:
         self.LOG("Dataset load succesfully")
 
         if self.parameter_dict["net"] == "UNet":
-            self.model = UNet(3, 1, bilinear=self.parameter_dict["bilinear"]).to(self.parameter_dict["device"])
+            self.model = UNet(1, 1, bilinear=self.parameter_dict["bilinear"]).to(self.parameter_dict["device"])
             self.model.init_weights()
         elif self.parameter_dict["net"] == "RDAUNet":
             self.model = RDAU_NET().to(self.parameter_dict["device"])
             self.model.init_weights()
         elif self.parameter_dict["net"] == "UNet2":
-            self.model = UNet2(3, 1).to(self.parameter_dict["device"])
+            self.model = UNet2(1, 1).to(self.parameter_dict["device"])
             self.model.init_weights()
         elif self.parameter_dict["net"] == "UNetpp":
             self.model = UNetpp(1).to(self.parameter_dict["device"])
             self.model.init_weights()
         elif self.parameter_dict["net"] == "TransUNet":
-            self.model = TransUnet(in_channels=3, img_dim=128, vit_blocks=self.parameter_dict["vit_blocks"],
+            self.model = TransUnet(in_channels=1, img_dim=128, vit_blocks=self.parameter_dict["vit_blocks"],
                                     vit_dim_linear_mhsa_block=self.parameter_dict["vit_dim"],
                                     classes=1).to(self.parameter_dict["device"])
         else:
@@ -258,7 +258,7 @@ class UnetTrainer:
 
             metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.model,
                                     self.parameter_dict["device"], writer=self.writer,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=20, folder=f"{self.experiment_folder}/segmentations")
+                                    SAVE_SEGS=True, N_EPOCHS_SAVE=10, folder=f"{self.experiment_folder}/segmentations")
 
             if self.parameter_dict['mlflow']:
                 mlflow.log_metric("CCR", metrics.CCR, step=epoch)
@@ -333,7 +333,7 @@ class UnetTrainer:
         # Create the perturbed image by adjusting each pixel of the input image
         perturbed_image = image + epsilon*sign_data_grad
         # Adding clipping to maintain [0,1] range
-        perturbed_image = torch.clamp(perturbed_image, -2, 2)
+        perturbed_image = torch.clamp(perturbed_image, -1, 1)
         # Return the perturbed image
         return perturbed_image
 

@@ -114,7 +114,7 @@ class RDAU_NET(nn.Module):
     def __init__(self):
         super(RDAU_NET, self).__init__()
 
-        self.downsampling_conv1 = EncoderResidualUnit(in_channels=3, out_channels=32, stride=1)
+        self.downsampling_conv1 = EncoderResidualUnit(in_channels=1, out_channels=32, stride=1)
         self.downsampling_conv2 = EncoderResidualUnit(in_channels=32, out_channels=64, stride=2)
         self.downsampling_conv3 = EncoderResidualUnit(in_channels=64, out_channels=128, stride=2)
         self.downsampling_conv4 = EncoderResidualUnit(in_channels=128, out_channels=256, stride=2)

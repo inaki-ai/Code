@@ -92,12 +92,7 @@ def generate_output_img(image, gt, segmentation):
     ALPHA = 0.57
     ALPHA2 = 0.
 
-    if np.max(image) > 1. and False:
-        cv2.imwrite("img.png", image)
-        image = image.astype(np.float32)
-        cv2.imwrite("img2.png", image)
-        image /= 255.
-        cv2.imwrite("img3.png", image.astype(np.float32))
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
     if np.max(gt) > 1.:
         gt = gt.astype(np.float32)

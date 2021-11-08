@@ -3,14 +3,15 @@ import numpy as np
 import PIL
 import cv2
 
+
 class AugmentationPipeline:
 
     def __init__(self):
 
-        self.p = 0.1
+        self.p = 0.15
         self.spatial_aug = iaa.Sequential([
             iaa.Fliplr(0.5),
-            #iaa.Flipud(0.25),
+            iaa.Flipud(0.5),
             #iaa.Sometimes(0.5, iaa.PiecewiseAffine(scale=(0.05, 0.05))),
             #iaa.geometric.Affine(scale=0.8),
             iaa.Sometimes(0.1,
@@ -28,7 +29,7 @@ class AugmentationPipeline:
         ])
 
         self.color_aug = iaa.Sequential([
-            iaa.MultiplyAndAddToBrightness(mul=(0.8, 1.2), add=(-15, 15)),
+            #iaa.MultiplyAndAddToBrightness(mul=(0.8, 1.2), add=(-15, 15)),
             #iaa.Sometimes(0.25, iaa.MedianBlur(k=(3, 11))),
             #iaa.AddToHueAndSaturation((-50, 50)),
             #iaa.HistogramEqualization()
@@ -37,14 +38,14 @@ class AugmentationPipeline:
 
     def __call__(self, img, mask):
 
-        np_img = np.array(img)
+        np_img = np.array(img).reshape(np.array(img).shape[0], np.array(img).shape[1], 1)
         np_mask = np.array(mask).reshape(np.array(mask).shape[0], np.array(mask).shape[1], 1)
         np_img_mask = np.concatenate((np_img, np_mask), axis=2)
 
         np_augmented = self.spatial_aug.augment_image(np.array(np_img_mask))
 
-        np_augmented_img = np_augmented[:, :, :3]
-        np_augmented_mask = np_augmented[:, :, 3]
+        np_augmented_img = np_augmented[:, :, 0]
+        np_augmented_mask = np_augmented[:, :, 1]
 
         np_augmented_img = self.color_aug.augment_image(np_augmented_img)
 

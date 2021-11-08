@@ -9,6 +9,13 @@ import cv2
 import PIL
 from skimage.exposure import equalize_adapthist
 
+def preprocess(image):
+    image = np.array(image)
+    image = cv2.bilateralFilter(image, 10, 15, 15)
+    image = cv2.equalizeHist(image)
+    image = Image.fromarray(image).convert('L')
+    return image
+
 
 class Set(torch.utils.data.Dataset):
 
@@ -43,21 +50,15 @@ class Set(torch.utils.data.Dataset):
                 if remote:
                     img_filename = self.data.iloc[idx, 0].replace(replacement[0], replacement[1])
                     mask_filename = self.data.iloc[idx, 1].replace(replacement[0], replacement[1])
-                    image = Image.open(img_filename).convert("RGB")
+                    image = Image.open(img_filename).convert("L")
                     mask = Image.open(mask_filename).convert("L")
                 else:
-                    image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+                    image = Image.open(self.data.iloc[idx, 0]).convert("L")
                     #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
                     mask = Image.open(self.data.iloc[idx, 1]).convert("L")
 
                 if True:
-                    image = np.array(image)
-                    image = cv2.bilateralFilter(image, 3, 10, 10)
-                    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    #image = cv2.equalizeHist(image).astype(np.float32)
-                    image = equalize_adapthist(image).astype(np.float32) * 255.
-                    #image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
-                    image = Image.fromarray(image.astype(np.uint8))
+                    image = preprocess(image)
 
                 self.images.append((image, mask))
 
@@ -86,31 +87,15 @@ class Set(torch.utils.data.Dataset):
             if self.remote:
                 img_filename = self.data.iloc[idx, 0].replace(self.replacement[0], self.replacement[1])
                 mask_filename = self.data.iloc[idx, 1].replace(self.replacement[0], self.replacement[1])
-                image = Image.open(img_filename).convert("RGB")
+                image = Image.open(img_filename).convert("L")
                 mask = Image.open(mask_filename).convert("L")
             else:
-                image = Image.open(self.data.iloc[idx, 0]).convert("RGB")
+                image = Image.open(self.data.iloc[idx, 0]).convert("L")
                 #image = image.filter(ImageFilter.MedianFilter(size = 3)) 
                 mask = Image.open(self.data.iloc[idx, 1]).convert("L")
                 
             if True:
-                image = np.array(image)
-                image = cv2.bilateralFilter(image, 5, 115, 15)
-                #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                #image = cv2.equalizeHist(image).astype(np.float32)
-                image = equalize_adapthist(image).astype(np.float32) * 255.
-                #image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
-                image = Image.fromarray(image.astype(np.uint8))
-
-            if True:
-                    image = np.array(image)
-                    image = cv2.bilateralFilter(image, 5, 115, 15)
-                    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    #image = cv2.equalizeHist(image).astype(np.float32)
-                    image = equalize_adapthist(image).astype(np.float32) * 255.
-                    #image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR).astype(np.float32)
-                    image = Image.fromarray(image.astype(np.uint8))
-
+                image = preprocess(image)
 
         if "malignant" in self.data.iloc[idx, 0]:
           Class = "malignant"
@@ -124,32 +109,21 @@ class Set(torch.utils.data.Dataset):
         if self.augmentation_pipeline is not None:
             image, mask = self.augmentation_pipeline(image, mask)
 
-        # Must be PIL images
-        if self.transform and False:
-            image = self.transform(image)
-            mask = self.transform(mask)
+        resize_t = transforms.Resize((128, 128), interpolation=PIL.Image.NEAREST)
+        to_torch_tensor_t = transforms.ToTensor()
 
-        t1 = transforms.Resize((128, 128), interpolation=PIL.Image.NEAREST)
-        t2 = transforms.ToTensor()
-        #t3 = transforms.Normalize(mean=0.485, std=0.225)
+        image = resize_t(image)
+        mask = resize_t(mask)
 
-        image = t1(image)
-        mask = t1(mask)
+        image = to_torch_tensor_t(image)
+        mask = to_torch_tensor_t(mask)
 
-        image = t2(image)
-        mask = t2(mask)
-
-        #image = t3(image)
         image = image.sub_(0.5).div_(0.5)
-        
-        if self.generation:
-            image = torch.cat([image, mask], axis=0)
-
-        #to_tensor = transforms.ToTensor()
         
         sample = {
           "image": image,
           "mask": mask,
+          "image_p_mask": torch.cat([image, mask], axis=0),
           "class": Class,
           "filename": filename
         }
@@ -204,8 +178,7 @@ def load_dataset(parameter_dict, print_info=True):
     dataset = DataSet(dataset_file, transforms,
                       augmentation_pipelines, batchsize, workers, cache,
                       remote=parameter_dict['remote'],
-                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']),
-                      generation=parameter_dict['generation'])
+                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']))
 
     if print_info:
         print("-----------------------------------------------------------------")

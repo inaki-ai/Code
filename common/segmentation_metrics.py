@@ -195,8 +195,8 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                     segmentation_save = trans(segmentation)
                     segmentation_save_vals = trans(segmentation_val)
     
-                    opencv_image = np.array(image_save)
-                    opencv_image = opencv_image[:, :, ::-1].copy()
+                    opencv_image = np.array(image_save).copy()
+                    #opencv_image = opencv_image[:, :, ::-1].copy()
                     opencv_gt = np.array(mask_save)
                     opencv_segmentation = np.array(segmentation_save)
                     opencv_segmentation_vals = np.array(segmentation_save_vals)
