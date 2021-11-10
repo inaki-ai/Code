@@ -3,13 +3,19 @@ from torch import nn
 from common.utils import *
 
 class VGGBlock(nn.Module):
-    def __init__(self, in_channels, middle_channels, out_channels):
+    def __init__(self, in_channels, middle_channels, out_channels, stride=2):
         super().__init__()
         self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(p=0.05)
         self.conv1 = nn.Conv2d(in_channels, middle_channels, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(middle_channels)
         self.conv2 = nn.Conv2d(middle_channels, out_channels, 3, padding=1)
         self.bn2 = nn.BatchNorm2d(out_channels)
+        
+        self.downsample = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, padding=0, bias=False),
+            nn.BatchNorm2d(out_channels)
+        )
 
     def forward(self, x):
         out = self.conv1(x)
@@ -18,22 +24,26 @@ class VGGBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.bn2(out)
+        out = self.dropout(out)
         out = self.relu(out)
-
+               
+        #out = out + x
+        
         return out
 
 class UNetpp(nn.Module):
     def __init__(self, num_classes, input_channels=1, deep_supervision=False, **kwargs):
         super().__init__()
 
-        nb_filter = [32, 64, 128, 256, 512]
+        #nb_filter = [32, 64, 128, 256, 512]
+        nb_filter = [16, 32, 64, 128, 256]
 
         self.deep_supervision = deep_supervision
 
         self.pool = nn.MaxPool2d(2, 2)
         self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
 
-        self.conv0_0 = VGGBlock(input_channels, nb_filter[0], nb_filter[0])
+        self.conv0_0 = VGGBlock(input_channels, nb_filter[0], nb_filter[0], stride=1)
         self.conv1_0 = VGGBlock(nb_filter[0], nb_filter[1], nb_filter[1])
         self.conv2_0 = VGGBlock(nb_filter[1], nb_filter[2], nb_filter[2])
         self.conv3_0 = VGGBlock(nb_filter[2], nb_filter[3], nb_filter[3])

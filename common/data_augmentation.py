@@ -8,7 +8,7 @@ class AugmentationPipeline:
 
     def __init__(self):
 
-        self.p = 0.15
+        self.p = 0.25
         self.spatial_aug = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Flipud(0.5),

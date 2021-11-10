@@ -2,13 +2,13 @@
 # Common
 net: UNetpp # UNet, RDAUNet, UNet2, UNetpp, TransUNet
 bilinear: True
-n_epochs: 150
-batch_size: 16
-dataset: busi.yaml
-workers: 9
+n_epochs: 200
+batch_size: 128
+dataset: busi_remote.yaml
+workers: 32
 cache: ram # ram or disk
 data_augmentation: True
-tensorboard: True
+tensorboard: False
 random_seed: 42
 
 optimizer: Adam # Adam, RMSProp
@@ -18,17 +18,17 @@ adam_beta2: 0.999
 vit_blocks: 8
 vit_dim: 512
 
-remote: False
+remote: True
 change_string: /workspace/shared_files/
 new_string: /home/imartinez/
 #new_string: D:\
 multi_gpu: False
-device: 'cuda:0'
+device: 'cuda:2'
 mlflow: False
 
 # Unet trainers
-learning_rate: 0.000085
-pretrained_weights_path: /workspace/shared_files/TFM/Code/experiments/exp52/weights/last.pt
+learning_rate: 0.00625
+pretrained_weights_path: /home/imartinez/Code/experiments/exp1/weights/last.pt
 pretrained_weights: False
 adversarial_training: True
 epsilon: 0.007
