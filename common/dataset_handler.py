@@ -9,11 +9,15 @@ import cv2
 import PIL
 from skimage.exposure import equalize_adapthist
 
-def preprocess(image):
+def preprocess(image, grayscale):
     image = np.array(image)
     image = cv2.bilateralFilter(image, 10, 15, 15)
     image = cv2.equalizeHist(image)
-    image = Image.fromarray(image).convert('L')
+    if not grayscale:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        image = Image.fromarray(image).convert('RGB')
+    else:
+        image = Image.fromarray(image).convert('L')
     return image
 
 
@@ -25,7 +29,7 @@ class Set(torch.utils.data.Dataset):
     indexar (ej: dataset[i])
     """
 
-    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk", remote=False, replacement=("", ""), generation=False):
+    def __init__(self, csv_file, id, transform=None, augmentation_pipeline=None, cache="disk", remote=False, replacement=("", ""), generation=False, grayscale=True):
         """
         En el constructor simplemente se almecenan los datos
 
@@ -43,6 +47,8 @@ class Set(torch.utils.data.Dataset):
         self.replacement = replacement
         self.generation = generation
         
+        self.grayscale = grayscale
+        
         if self.cache == "ram":
             self.images = []
             for idx in range(len(self.data)):
@@ -58,7 +64,8 @@ class Set(torch.utils.data.Dataset):
                     mask = Image.open(self.data.iloc[idx, 1]).convert("L")
 
                 if True:
-                    image = preprocess(image)
+                    image = preprocess(image, self.grayscale)
+                    
 
                 self.images.append((image, mask))
 
@@ -95,7 +102,7 @@ class Set(torch.utils.data.Dataset):
                 mask = Image.open(self.data.iloc[idx, 1]).convert("L")
                 
             if True:
-                image = preprocess(image)
+                image = preprocess(image, self.grayscale)
 
         if "malignant" in self.data.iloc[idx, 0]:
           Class = "malignant"
@@ -134,17 +141,17 @@ class Set(torch.utils.data.Dataset):
 
 class DataSet():
 
-    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache, remote=False, replacement=("", ""), generation=False):
+    def __init__(self, dataset_file, transforms, augmentation_pipelines, batchsize, workers, cache, remote=False, replacement=("", ""), generation=False, grayscale=True):
 
         file = open(dataset_file, 'r')
         dataset_files = yaml.safe_load(file)
 
         self.trainset = Set(dataset_files["train"], "train", transforms["train"],
-                            augmentation_pipelines["train"], cache, remote, replacement, generation)
+                            augmentation_pipelines["train"], cache, remote, replacement, generation, grayscale)
         self.valset = Set(dataset_files["val"], "val", transforms["val"],
-                            augmentation_pipelines["val"], cache, remote, replacement, generation)
+                            augmentation_pipelines["val"], cache, remote, replacement, generation, grayscale)
         self.testset = Set(dataset_files["test"], "test", transforms["test"],
-                            augmentation_pipelines["test"], cache, remote, replacement, generation)
+                            augmentation_pipelines["test"], cache, remote, replacement, generation, grayscale)
 
         self.batchsize = batchsize
         self.workers = workers
@@ -178,7 +185,8 @@ def load_dataset(parameter_dict, print_info=True):
     dataset = DataSet(dataset_file, transforms,
                       augmentation_pipelines, batchsize, workers, cache,
                       remote=parameter_dict['remote'],
-                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']))
+                      replacement=(parameter_dict['change_string'], parameter_dict['new_string']),
+                      grayscale=parameter_dict['grayscale'])
 
     if print_info:
         print("-----------------------------------------------------------------")

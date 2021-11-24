@@ -129,3 +129,5 @@ runs
 *tfevents*
 *.pt
 mlruns
+final_models
+aug

@@ -83,18 +83,20 @@ class UNet(nn.Module):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
+        
+        nc = 32
 
-        self.inc = DoubleConv(n_channels, 64)
-        self.down1 = Down(64, 128)
-        self.down2 = Down(128, 256)
-        self.down3 = Down(256, 512)
+        self.inc = DoubleConv(n_channels, nc)
+        self.down1 = Down(nc, nc*2)
+        self.down2 = Down(nc*2, nc*4)
+        self.down3 = Down(nc*4, nc*8)
         factor = 2 if bilinear else 1
-        self.down4 = Down(512, 1024 // factor)
-        self.up1 = Up(1024, 512 // factor, bilinear)
-        self.up2 = Up(512, 256 // factor, bilinear)
-        self.up3 = Up(256, 128 // factor, bilinear)
-        self.up4 = Up(128, 64, bilinear)
-        self.outc = OutConv(64, n_classes)
+        self.down4 = Down(nc*8, nc*16 // factor)
+        self.up1 = Up(nc*16, nc*8 // factor, bilinear)
+        self.up2 = Up(nc*8, nc*4 // factor, bilinear)
+        self.up3 = Up(nc*4, nc*2 // factor, bilinear)
+        self.up4 = Up(nc*2, nc, bilinear)
+        self.outc = OutConv(nc, n_classes)
 
     def init_weights(self):
 

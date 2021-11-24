@@ -21,11 +21,10 @@ from common.hyperparameters import HyperparameterReader
 from common.dataset_handler import load_dataset
 from common.image_transformations import load_img_transforms, UnNormalize
 from common.data_augmentation import load_data_augmentation_pipes
-from common.utils import check_experiments_folder, check_runs_folder
+from common.utils import check_experiments_folder, check_runs_folder, merge_images_with_masks
 from common.segmentation_metrics import get_evaluation_metrics
 from common.progress_logger import ProgressBar
 
-import mlflow
 
 class WGanTrainer:
 
@@ -36,9 +35,6 @@ class WGanTrainer:
         hyperparameter_loader = HyperparameterReader(hyperparams_file)
         self.parameter_dict = hyperparameter_loader.load_param_dict()
 
-        mlflow.set_tag('Exp', self.experiment_folder)
-        mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
-
         self.LOG("Launching WganTrainer...")
         self.LOG("Hyperparameters succesfully read from {hyperparams_file}:")
         for key, val in self.parameter_dict.items():
@@ -46,9 +42,9 @@ class WGanTrainer:
 
         self.set_random_seed(self.parameter_dict["random_seed"])
 
-        self.parameter_dict["device"] = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+        #self.parameter_dict["device"] = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
-        self.LOG("Found device: {}".format(self.parameter_dict["device"]))
+        #self.LOG("Found device: {}".format(self.parameter_dict["device"]))
 
         transforms_dict = load_img_transforms()
         self.LOG("Transforms dict load succesfully")
@@ -63,33 +59,29 @@ class WGanTrainer:
         self.LOG("Dataset load succesfully")
 
         if self.parameter_dict["net"] == "UNet":
-            self.generator = UNet(3, 1, bilinear=self.parameter_dict["bilinear"]).to(self.parameter_dict["device"])
+            self.generator = UNet(1, 1, bilinear=self.parameter_dict["bilinear"]).to(self.parameter_dict["device"])
             self.generator.init_weights()
         elif self.parameter_dict["net"] == "RDAUNet":
             self.generator = RDAU_NET().to(self.parameter_dict["device"])
             self.generator.init_weights()
         elif self.parameter_dict["net"] == "UNet2":
-            self.generator = UNet2(3, 1).to(self.parameter_dict["device"])
+            self.generator = UNet2(1, 1).to(self.parameter_dict["device"])
             self.generator.init_weights()
         elif self.parameter_dict["net"] == "UNetpp":
             self.generator = UNetpp(1).to(self.parameter_dict["device"])
             self.generator.init_weights()
-        elif self.parameter_dict["net"] == "TransUNet":
-            self.generator = TransUnet(in_channels=3, img_dim=128, vit_blocks=self.parameter_dict["vit_blocks"],
-                                    vit_dim_linear_mhsa_block=self.parameter_dict["vit_dim"],
-                                    classes=1).to(self.parameter_dict["device"])
         else:
             #TODO
             pass
 
         if self.parameter_dict["critic"] == "Critic1":
-            self.critic = Critic1(3).to(self.parameter_dict["device"])
+            self.critic = Critic1(2).to(self.parameter_dict["device"])
             self.critic.init_weights()
         elif self.parameter_dict["critic"] == "Critic2":
-            self.critic = Critic2(3).to(self.parameter_dict["device"])
+            self.critic = Critic2(2).to(self.parameter_dict["device"])
             self.critic.init_weights()
         elif self.parameter_dict["critic"] == "Critic3_CT_WGAN":
-            self.critic = Critic3_CT_WGAN(3).to(self.parameter_dict["device"])
+            self.critic = Critic3_CT_WGAN(2).to(self.parameter_dict["device"])
             self.critic.init_weights()
         else:
             #TODO
@@ -129,7 +121,7 @@ class WGanTrainer:
         else:
             self.writer = None
 
-        self.un_normalizer = UnNormalize(mean=0.485, std=0.225)
+        #self.un_normalizer = UnNormalize(mean=0.485, std=0.225)
 
         self.dsc_best =  -1
 
@@ -142,10 +134,14 @@ class WGanTrainer:
         np.random.seed(random_seed)
 
 
-    def load_weights(self, generator=True):
+    def load_weights(self, generator=True, path_w=None):
+        
         try:
             if generator:
-                self.generator.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_generator"]))
+                if path_w == None:
+                    self.generator.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_generator"]))
+                else:
+                    self.generator.load_state_dict(torch.load(os.path.join('/home/imartinez/Code', path_w)))
             else:
                 self.critic.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path_critic"]))
 
@@ -229,7 +225,8 @@ class WGanTrainer:
         hard_sigmoid = nn.Hardsigmoid()
         segmentations = hard_sigmoid(self.generator(images))
 
-        images_with_segmentations = images * segmentations
+        images_with_segmentations = torch.autograd.Variable(merge_images_with_masks(images, segmentations),
+                                                            requires_grad=True).to(self.parameter_dict['device'])
 
         loss_G = -torch.mean(self.critic(images_with_segmentations))
 
@@ -239,16 +236,16 @@ class WGanTrainer:
         return loss_G
 
 
-    def critic_step(self, images, masks):
+    def critic_step(self, images, masks, images_with_masks):
 
         self.optimizerC.zero_grad()
-
-        images_with_masks = images * masks
 
         hard_sigmoid = nn.Hardsigmoid()
         segmentations = hard_sigmoid(self.generator(images).detach())
 
-        images_with_segmentations = images * segmentations
+        images_with_segmentations = torch.autograd.Variable(merge_images_with_masks(images, segmentations),
+                                                            requires_grad=True).to(self.parameter_dict['device'])
+        
 
         loss_C = -torch.mean(self.critic(images_with_masks)) + torch.mean(self.critic(images_with_segmentations))
 
@@ -283,8 +280,10 @@ class WGanTrainer:
 
             images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
                             batched_sample["mask"].to(self.parameter_dict["device"])
+            
+            images_c_masks = batched_sample['image_p_mask'].to(self.parameter_dict["device"])
 
-            loss_C = self.critic_step(images, masks)
+            loss_C = self.critic_step(images, masks, images_c_masks)
             C_avg_loss += loss_C.item()
             forward_passed_batches += 1
 
@@ -317,9 +316,6 @@ class WGanTrainer:
             end = time.time()
             elapsed = end - start
 
-            mlflow.log_metric("train_gen_loss", train_gen_loss)
-            mlflow.log_metric("train_crit_loss", train_crit_loss)
-
             msg = f"Epoch {epoch} finished -- Generator train loss: {train_gen_loss:.4f} - " +\
                   f"Critic train loss: {train_crit_loss:.4f} -- Elapsed time: {elapsed:.1f}s"
             print(msg + "\n")
@@ -332,34 +328,12 @@ class WGanTrainer:
 
             metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.generator,
                                     self.parameter_dict["device"], writer=self.writer,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=20, folder=f"{self.experiment_folder}/segmentations")
-
-            mlflow.log_metric("CCR", metrics.CCR, step=epoch)
-            mlflow.log_metric("Precision", metrics.precision, step=epoch)
-            mlflow.log_metric("Recall - Sensitivity", metrics.recall, step=epoch)
-            mlflow.log_metric("Specifity", metrics.specifity, step=epoch)
-            mlflow.log_metric("F1 score", metrics.f1_score, step=epoch)
-            mlflow.log_metric("Jaccard coef - IoU", metrics.jaccard, step=epoch)
-            mlflow.log_metric("Dice score - DSC", metrics.dice, step=epoch)
-            mlflow.log_metric("ROC AUC", metrics.roc_auc, step=epoch)
-            mlflow.log_metric("Precision-recall AUC", metrics.precision_recall_auc, step=epoch)
-            mlflow.log_metric("Hausdorf error", metrics.hausdorf_error, step=epoch)
+                                    SAVE_SEGS=False, N_EPOCHS_SAVE=20, folder=f"{self.experiment_folder}/segmentations")
 
             self.save_weights()
             self.LOG(f"Last weights saved at epoch {epoch}")
 
             if metrics.dice > self.dsc_best:
-
-                mlflow.log_metric("CCR_best", metrics.CCR, step=epoch)
-                mlflow.log_metric("Precision_best", metrics.precision, step=epoch)
-                mlflow.log_metric("Recall - Sensitivity_best", metrics.recall, step=epoch)
-                mlflow.log_metric("Specifity_best", metrics.specifity, step=epoch)
-                mlflow.log_metric("F1 score_best", metrics.f1_score, step=epoch)
-                mlflow.log_metric("Jaccard coef - IoU_best", metrics.jaccard, step=epoch)
-                mlflow.log_metric("Dice score - DSC_best", metrics.dice, step=epoch)
-                mlflow.log_metric("ROC AUC_best", metrics.roc_auc, step=epoch)
-                mlflow.log_metric("Precision-recall AUC_best", metrics.precision_recall_auc, step=epoch)
-                mlflow.log_metric("Hausdorf error_best", metrics.hausdorf_error, step=epoch)
 
                 self.LOG(f"New best value of DSC reach: {metrics.dice:.4f} (last: {self.dsc_best:.4f})")
                 self.dsc_best = metrics.dice
@@ -371,17 +345,43 @@ class WGanTrainer:
 
     def test(self):
 
-        self.load_weights()
+        #self.load_weights()
         self.generator.eval()
 
         print("[I] Evalutating the model...")
 
         metrics = get_evaluation_metrics(None, -1, self.dataset.testset_loader, self.generator,
                                     self.parameter_dict["device"], None, COLOR=True,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations")
+                                    SAVE_SEGS=False, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations", filename='avg_metrics_last.txt')
 
         print("\n----------------------------------------------------------------------------")
-        print("EVALUTAION RESULTS:")
+        print("EVALUTAION RESULTS (LAST):")
+        print("\tCCR: {:.4f}".format(metrics.CCR))
+        print("\tPrecision: {:.4f}".format(metrics.precision))
+        print("\tRecall: {:.4f}".format(metrics.recall))
+        print("\tSensibility: {:.4f}".format(metrics.sensibility))
+        print("\tSpecifity: {:.4f}".format(metrics.specifity))
+        print("\tF1 score: {:.4f}".format(metrics.f1_score))
+        print("\tJaccard coef: {:.4f}".format(metrics.jaccard))
+        print("\tDSC coef: {:.4f}".format(metrics.dice))
+        print("\tROC-AUC: {:.4f}".format(metrics.roc_auc))
+        print("\tPrecision-recall AUC: {:.4f}".format(metrics.precision_recall_auc))
+        print("\tHausdorf error: {:.4f}".format(metrics.hausdorf_error))
+        print("----------------------------------------------------------------------------")
+        print(f"Segmentations saved at {self.experiment_folder}/segmentations")
+        
+        
+        best_w = os.path.join(self.experiment_folder, "weights", 'generator_best.pt')
+        self.load_weights(best_w)
+        
+        print("[I] Evalutating the model...")
+
+        metrics = get_evaluation_metrics(None, -1, self.dataset.testset_loader, self.generator,
+                                    self.parameter_dict["device"], None, COLOR=True,
+                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations", filename='avg_metrics_best.txt')
+
+        print("\n----------------------------------------------------------------------------")
+        print("EVALUTAION RESULTS (BEST):")
         print("\tCCR: {:.4f}".format(metrics.CCR))
         print("\tPrecision: {:.4f}".format(metrics.precision))
         print("\tRecall: {:.4f}".format(metrics.recall))
@@ -400,8 +400,6 @@ class WGanTrainer:
     def LOG(self, msg):
 
         file = os.path.join(self.experiment_folder, "log.txt")
-
-        mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
 
         if not os.path.isfile(file):
             with open(file, 'w') as f:

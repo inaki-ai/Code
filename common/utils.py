@@ -17,7 +17,7 @@ def merge_images_with_masks(images, masks):
 
     batch_size = images.shape[0]
     img_dim = images.shape[2]
-    merged = torch.rand(batch_size, 4, img_dim, img_dim)
+    merged = torch.rand(batch_size, 2, img_dim, img_dim)
 
     for i in range(batch_size):
         merged[i] = torch.cat((images[i], masks[i]))
@@ -34,7 +34,7 @@ def weights_init(m):
     """
     classname = m.__class__.__name__
 
-    no_init = ["OutConv", "DoubleConv"]
+    no_init = ["OutConv", "DoubleConv", "InceptionConvolutionLayer"]
 
     if classname.find('Conv') != -1:
         if classname not in no_init:

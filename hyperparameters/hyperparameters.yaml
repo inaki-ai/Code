@@ -1,11 +1,15 @@
 ---
+######################
+######## UNET ########
+######################
 # Common
-net: UNetpp # UNet, RDAUNet, UNet2, UNetpp, TransUNet
+net: UNet # UNet, RDAUNet, UNet2, UNetpp, UnetSharp, RCAIUNet, SegNet_VGG19
+grayscale: True
 bilinear: True
-n_epochs: 200
-batch_size: 128
-dataset: busi_remote.yaml
-workers: 32
+n_epochs: 150
+batch_size: 32
+dataset: dataset6.yaml
+workers: 16
 cache: ram # ram or disk
 data_augmentation: True
 tensorboard: False
@@ -15,43 +19,24 @@ optimizer: Adam # Adam, RMSProp
 adam_beta1: 0.9
 adam_beta2: 0.999
 
-vit_blocks: 8
-vit_dim: 512
-
-remote: True
+remote: False
 change_string: /workspace/shared_files/
 new_string: /home/imartinez/
 #new_string: D:\
 multi_gpu: False
-device: 'cuda:2'
-mlflow: False
+device: 'cuda:1'
 
 # Unet trainers
-learning_rate: 0.00625
-pretrained_weights_path: /home/imartinez/Code/experiments/exp1/weights/last.pt
+learning_rate: 0.00025
+pretrained_weights_path: /home/imartinez/Code/experiments/exp40/weights/last.pt
 pretrained_weights: False
 adversarial_training: True
-epsilon: 0.007
+epsilon: 0.1
 
-# Unet with WGan trainers
-pretrained_weights_generator: True
-pretrained_weights_critic: False
-#pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp33/weights/last.pt
-pretrained_weights_path_generator: /workspace/shared_files/TFM/Code/experiments/exp33/weights/generator_best.pt
-pretrained_weights_path_critic: /workspace/shared_files/TFM/Code/experiments/exp36/weights/best.pt
-critic: Critic3_CT_WGAN # Critic1, Critic2, Critic3_CT_WGAN
+# UnetSharp
+nc: 16
+pooling: Hartley # Max, Hartley, Hybrid
+dropout: dropblock # dropout, dropblock, None
+block_size: 3 # Dropblock
 
-generator_learning_rate: 0.00003
-critic_learning_rate: 0.000003
 
-n_critic: 5
-consistency_term: True
-M: 0
-
-# Image generation
-image_generator: ImageGenerator1
-
-pretrained_weights_path_image_generator: /
-pretrained_image_weights_generator: False
-
-latent_vector_size: 100

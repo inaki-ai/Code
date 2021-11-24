@@ -91,7 +91,7 @@ def get_conf_mat(prediction, groundtruth):
 
 
 def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=None, SAVE_SEGS=False, COLOR=True,
-                           N_EPOCHS_SAVE=10, folder=""):
+                           N_EPOCHS_SAVE=10, folder="", filename='avg_metrics.txt', grayscale=True):
 
     if not os.path.isdir(folder):
         os.mkdir(folder)
@@ -189,6 +189,7 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                 hausdorf_errors.append(hausdorf_error)
 
                 if SAVE_SEGS and (epoch % N_EPOCHS_SAVE == 0 or epoch == -1):
+                    
 
                     image_save = trans(image.mul_(0.5).add_(0.5))
                     mask_save = trans(mask)
@@ -196,6 +197,13 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                     segmentation_save_vals = trans(segmentation_val)
     
                     opencv_image = np.array(image_save).copy()
+                    
+            
+                    if not grayscale:
+                        opencv_image = np.array(image_save)[:, :, 0].copy()
+                    else:
+                        opencv_image = np.array(image_save).copy()
+            
                     #opencv_image = opencv_image[:, :, ::-1].copy()
                     opencv_gt = np.array(mask_save)
                     opencv_segmentation = np.array(segmentation_save)
@@ -207,40 +215,6 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
                         cv2.imwrite(os.path.join(save_folder, f"{name}.png"), img)
 
                     else:
-                        """
-                        opencv_image = cv2.resize(opencv_image, (512, 512))
-
-                        opencv_gt = cv2.resize(opencv_gt, (512, 512))
-                        opencv_gt = (opencv_gt > 0.5).astype(np.float32)
-
-                        opencv_segmentation = cv2.resize(opencv_segmentation, (512, 512))
-                        opencv_segmentation = (opencv_segmentation > 0.5).astype(np.float32)
-                        """
-                        """
-                        contours_gt, _ = cv2.findContours(opencv_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                        contours_seg, _ = cv2.findContours(opencv_segmentation, cv2.RETR_TREE,
-                                                                  cv2.CHAIN_APPROX_SIMPLE)
-
-                        cv2.drawContours(opencv_image, contours_gt, -1, (0, 255, 0), 1)
-                        cv2.drawContours(opencv_image, contours_seg, -1, (0, 0, 255), 1)
-
-                        opencv_image = cv2.resize(opencv_image, (512, 512))
-
-                        cv2.imwrite(os.path.join(save_folder, f"{name}"), opencv_image)
-                        
-                        print(opencv_image.shape)
-                        print(opencv_gt.shape)
-                        print(opencv_segmentation_vals.shape)
-                        print()
-                        print(np.max(opencv_image))
-                        print(np.max(opencv_gt))
-                        print(np.max(opencv_segmentation_vals))
-                        print()
-                        print()
-                        """
-
-                        #opencv_image = self.un_normalizer(opencv_image)
-                        #opencv_image = (opencv_image * 0.225) + 0.485
 
                         save_image = generate_output_img(opencv_image, opencv_gt, opencv_segmentation_vals)
                         #save_image = opencv_image
@@ -292,23 +266,24 @@ def get_evaluation_metrics(logger, epoch, dataloader, segmentor, DEVICE, writer=
         std_roc_auc = np.std(np.array(roc_auc_coeffs))
 
         precision_recall_auc = np.nansum(precision_recall_auc_coeffs) / len(precision_recall_auc_coeffs)
-        std_roc_auc = np.std(np.array(precision_recall_auc_coeffs))
+        std_pr_auc = np.std(np.array(precision_recall_auc_coeffs))
 
         mean_hausdorf_error = np.nansum(hausdorf_errors) / len(hausdorf_errors)
         std_hausdorf_error = np.std(np.array(hausdorf_errors))
 
         segmentor.train()
 
-        with open(os.path.join(folder, 'avg_metrics.txt'), 'w') as file:
-            file.write(f"CCR: {mean_ccr:.3f} +- {std_ccr:.3f}\n")
-            file.write(f"Precision: {mean_precision:.3f} +- {std_precision:.3f}\n")
-            file.write(f"Recall: {mean_recall:.3f} +- {std_recall:.3f}\n")
-            file.write(f"Specifity: {mean_specifity:.3f} +- {std_specifity:.3f}\n")
-            file.write(f"F1 score: {mean_f1_score:.3f} +- {std_f1_score:.3f}\n")
-            file.write(f"Jaccard: {mean_jaccard_coef:.3f} +- {std_jaccard_coef:.3f}\n")
-            file.write(f"DSC: {mean_dice_coeff:.3f} +- {std_dice_coeff:.3f}\n")
-            file.write(f"ROC AUC: {mean_roc_auc:.3f} +- {std_roc_auc:.3f}\n")
-            file.write(f"PR AUC: {precision_recall_auc:.3f} +- {std_hausdorf_error:.3f}\n")
+        with open(os.path.join(folder, filename), 'w') as file:
+            file.write(f"CCR: {mean_ccr:.4f} +- {std_ccr:.3f}\n")
+            file.write(f"Precision: {mean_precision:.4f} +- {std_precision:.3f}\n")
+            file.write(f"Recall: {mean_recall:.4f} +- {std_recall:.3f}\n")
+            file.write(f"Specifity: {mean_specifity:.4f} +- {std_specifity:.3f}\n")
+            file.write(f"F1 score: {mean_f1_score:.4f} +- {std_f1_score:.3f}\n")
+            file.write(f"Jaccard: {mean_jaccard_coef:.4f} +- {std_jaccard_coef:.3f}\n")
+            file.write(f"DSC: {mean_dice_coeff:.4f} +- {std_dice_coeff:.3f}\n")
+            file.write(f"ROC AUC: {mean_roc_auc:.4f} +- {std_roc_auc:.3f}\n")
+            file.write(f"PR AUC: {precision_recall_auc:.4f} +- {std_pr_auc:.3f}\n")
+            file.write(f"Hausdorf error: {mean_hausdorf_error:.4f} +- {std_hausdorf_error:.3f}\n")
 
         if writer is not None:
             writer.add_scalar("Metrics/ccr", mean_ccr, epoch)

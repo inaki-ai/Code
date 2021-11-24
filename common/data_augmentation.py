@@ -6,9 +6,10 @@ import cv2
 
 class AugmentationPipeline:
 
-    def __init__(self):
+    def __init__(self, grayscale=True):
 
-        self.p = 0.25
+        self.grayscale = grayscale
+        self.p = 0.125
         self.spatial_aug = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Flipud(0.5),
@@ -24,7 +25,9 @@ class AugmentationPipeline:
             iaa.Sometimes(self.p, iaa.ScaleX((0.8, 1.2))),
             iaa.Sometimes(self.p, iaa.ScaleY((0.8, 1.2))),
             iaa.Sometimes(self.p, iaa.TranslateX(percent=(-0.15, 0.15))),
-            iaa.Sometimes(self.p, iaa.TranslateY(percent=(-0.15, 0.15)))
+            iaa.Sometimes(self.p, iaa.TranslateY(percent=(-0.15, 0.15))),
+            iaa.Sometimes(self.p, iaa.ShearX(shear=(-15, 15))),
+            iaa.Sometimes(self.p, iaa.ShearY(shear=(-15, 15)))
 
         ])
 
@@ -37,14 +40,23 @@ class AugmentationPipeline:
         ])
 
     def __call__(self, img, mask):
+        
+        if self.grayscale:
+            nc = 1
+        else:
+            nc = 3
 
-        np_img = np.array(img).reshape(np.array(img).shape[0], np.array(img).shape[1], 1)
+        np_img = np.array(img).reshape(np.array(img).shape[0], np.array(img).shape[1], nc)
         np_mask = np.array(mask).reshape(np.array(mask).shape[0], np.array(mask).shape[1], 1)
         np_img_mask = np.concatenate((np_img, np_mask), axis=2)
 
         np_augmented = self.spatial_aug.augment_image(np.array(np_img_mask))
 
-        np_augmented_img = np_augmented[:, :, 0]
+        if self.grayscale:
+            np_augmented_img = np_augmented[:, :, 0]
+        else:
+            np_augmented_img = np_augmented[:, :, :-1]
+            
         np_augmented_mask = np_augmented[:, :, 1]
 
         np_augmented_img = self.color_aug.augment_image(np_augmented_img)
@@ -58,10 +70,10 @@ class AugmentationPipeline:
         return augmented_img, augmented_mask
 
 
-def load_data_augmentation_pipes(data_aug=False):
+def load_data_augmentation_pipes(data_aug=False, grayscale=True):
     if data_aug:
 
-        augmentation_pipe = AugmentationPipeline()
+        augmentation_pipe = AugmentationPipeline(grayscale=grayscale)
 
         augmentation_dict = {
             "train": augmentation_pipe,

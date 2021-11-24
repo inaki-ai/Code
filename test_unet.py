@@ -17,7 +17,7 @@ def main():
             unet_trainer.test()
     else:
         unet_trainer = UnetTrainer("hyperparameters.yaml")
-        unet_trainer.test()
+        
 
 
 if __name__ == '__main__':

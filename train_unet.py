@@ -4,22 +4,11 @@ import yaml
 
 
 def main():
-
-    file = open("hyperparameters/hyperparameters.yaml", 'r')
-    parameter_dict = yaml.safe_load(file)
     
-    if parameter_dict['mlflow']:
-        import mlflow
-
-        mlflow.set_experiment(parameter_dict["net"])
-
-        with mlflow.start_run():
-            unet_trainer = UnetTrainer("hyperparameters.yaml")
-            unet_trainer.train()
-            #unet_trainer.generate_adversarial_examples()
-    else:
-        unet_trainer = UnetTrainer("hyperparameters.yaml")
-        unet_trainer.train()
+    unet_trainer = UnetTrainer("hyperparameters.yaml")
+    unet_trainer.train()
+    unet_trainer.test()
+    #unet_trainer.generate_augmented_examples()
 
 
 if __name__ == '__main__':

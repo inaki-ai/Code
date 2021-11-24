@@ -16,7 +16,9 @@ from torchvision import transforms
 from models.segmentors.unet import UNet, UNet2
 from models.segmentors.rdau_net import RDAU_NET
 from models.segmentors.unetpp import UNetpp
-from self_attention_cv.transunet import TransUnet
+from models.segmentors.unet_sharp import UnetSharp
+from models.segmentors.rca_iunet import RCA_IUNET
+from models.segmentors.segnet import SegNet
 
 from common.hyperparameters import HyperparameterReader
 from common.dataset_handler import load_dataset
@@ -37,36 +39,23 @@ class UnetTrainer:
 
         hyperparameter_loader = HyperparameterReader(hyperparams_file)
         self.parameter_dict = hyperparameter_loader.load_param_dict()
-        
-        if self.parameter_dict['mlflow']:
-            import mlflow
-            from mlflow.tracking.fluent import set_experiment
-            
-            mlflow.set_tag('Exp', self.experiment_folder)
-            mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
 
         self.LOG("Launching UnetTrainer...")
         self.LOG("Hyperparameters succesfully read from {hyperparams_file}:")
         for key, val in self.parameter_dict.items():
             self.LOG(f"\t{key}: {val}")
             
-            if self.parameter_dict['mlflow']:
-                mlflow.log_param(key, val)
-
         self.set_random_seed(self.parameter_dict["random_seed"])
 
         if self.parameter_dict['device'] is False:
             self.parameter_dict["device"] = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-            
-        if self.parameter_dict['multi_gpu']:
-            self.parameter_dict["device"] = torch.device('cuda')
 
         self.LOG("Found device: {}".format(self.parameter_dict["device"]))
 
         transforms_dict = load_img_transforms()
         self.LOG("Transforms dict load succesfully")
 
-        augmentation_dict = load_data_augmentation_pipes(data_aug=self.parameter_dict["data_augmentation"])
+        augmentation_dict = load_data_augmentation_pipes(data_aug=self.parameter_dict["data_augmentation"], grayscale=self.parameter_dict["grayscale"])
         self.LOG("Data augmentation dict load succesfully")
 
         self.parameter_dict["transforms"] = transforms_dict
@@ -87,15 +76,22 @@ class UnetTrainer:
         elif self.parameter_dict["net"] == "UNetpp":
             self.model = UNetpp(1).to(self.parameter_dict["device"])
             self.model.init_weights()
-        elif self.parameter_dict["net"] == "TransUNet":
-            self.model = TransUnet(in_channels=1, img_dim=128, vit_blocks=self.parameter_dict["vit_blocks"],
-                                    vit_dim_linear_mhsa_block=self.parameter_dict["vit_dim"],
-                                    classes=1).to(self.parameter_dict["device"])
+        elif self.parameter_dict["net"] == "UnetSharp":
+            self.model = UnetSharp(nc=self.parameter_dict["nc"], pooling=self.parameter_dict["pooling"],
+                                   dropout=self.parameter_dict["dropout"], block_size=self.parameter_dict["block_size"]).to(self.parameter_dict["device"])
+            self.model.init_weights()
+        elif self.parameter_dict["net"] == "RCAIUNet":
+            self.model = RCA_IUNET(1, 16).to(self.parameter_dict["device"])
+            self.model.init_weights()
+        elif self.parameter_dict["net"] == "SegNet_VGG19":
+            self.model = SegNet(pretrained=True).to(self.parameter_dict["device"])
+            #self.model.init_weights()
         else:
-            #TODO
+            #TODO SegNet_VGG19
             pass
         if self.parameter_dict['multi_gpu']:
-            self.model = nn.DataParallel(self.model)
+            #self.model = nn.DataParallel(self.model)
+            self.model= nn.DataParallel(self.model, device_ids = [1, 2])
 
         self.LOG("Model {} load succesfully".format(self.parameter_dict["net"]))
 
@@ -116,8 +112,6 @@ class UnetTrainer:
         else:
             self.writer = None
 
-        self.un_normalizer = UnNormalize(mean=0.485, std=0.225)
-
         self.dsc_best =  -1
 
 
@@ -129,13 +123,21 @@ class UnetTrainer:
         np.random.seed(random_seed)
 
 
-    def load_weights(self):
-        try:
-            self.model.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path"]))
+    def load_weights(self, path_w=None):
+        
+        if path_w == None:
+            try:
+                self.model.load_state_dict(torch.load(self.parameter_dict["pretrained_weights_path"]))
 
-        except:
-            path = self.parameter_dict["pretrained_weights_path"]
-            raise Exception(f"[E] Pretrained weights do not exist at {path} or they are not compatible")
+            except:
+                path = self.parameter_dict["pretrained_weights_path"]
+                raise Exception(f"[E] Pretrained weights do not exist at {path} or they are not compatible")
+        else:
+            try:
+                self.model.load_state_dict(torch.load(path_w))
+            except:
+                path = os.path.join('/home/imartinez/Code', path_w)
+                raise Exception(f"[E] Pretrained weights do not exist at {path} or they are not compatible")
 
 
     def save_weights(self, best=False):
@@ -150,6 +152,16 @@ class UnetTrainer:
         else:
             torch.save(self.model.state_dict(), os.path.join(path, "best.pt"))
 
+    def update_learning_rate(self, epoch):
+        
+        PI = 3.14159
+        n_epochs = self.parameter_dict["n_epochs"]
+        initial_lr = self.parameter_dict["learning_rate"]
+        lr = initial_lr * (np.cos(PI * epoch/n_epochs) + 1.) / 2
+        
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr 
+        
 
     @staticmethod
     def compute_loss(prediction, target, bce_weight=0.5):
@@ -237,16 +249,13 @@ class UnetTrainer:
         for epoch in range(1, self.parameter_dict["n_epochs"]+1):
 
             self.LOG(f"Starting epoch {epoch}")
+            self.update_learning_rate(epoch)
 
             start = time.time()
             train_loss = self.train_step()
             val_loss = self.val_step()
             end = time.time()
             elapsed = end - start
-
-            if self.parameter_dict['mlflow']:
-                mlflow.log_metric("train_loss", train_loss)
-                mlflow.log_metric("val_loss", val_loss)
 
             msg = f"Epoch {epoch} finished -- Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f} -- Elapsed time: {elapsed:.1f}s"
             print(msg + "\n")
@@ -258,36 +267,13 @@ class UnetTrainer:
 
             metrics = get_evaluation_metrics(self.writer, epoch, self.dataset.valset_loader, self.model,
                                     self.parameter_dict["device"], writer=self.writer,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=10, folder=f"{self.experiment_folder}/segmentations")
+                                    SAVE_SEGS=False, N_EPOCHS_SAVE=10, folder=f"{self.experiment_folder}/segmentations",
+                                    grayscale=self.parameter_dict["grayscale"])
 
-            if self.parameter_dict['mlflow']:
-                mlflow.log_metric("CCR", metrics.CCR, step=epoch)
-                mlflow.log_metric("Precision", metrics.precision, step=epoch)
-                mlflow.log_metric("Recall - Sensitivity", metrics.recall, step=epoch)
-                mlflow.log_metric("Specifity", metrics.specifity, step=epoch)
-                mlflow.log_metric("F1 score", metrics.f1_score, step=epoch)
-                mlflow.log_metric("Jaccard coef - IoU", metrics.jaccard, step=epoch)
-                mlflow.log_metric("Dice score - DSC", metrics.dice, step=epoch)
-                mlflow.log_metric("ROC AUC", metrics.roc_auc, step=epoch)
-                mlflow.log_metric("Precision-recall AUC", metrics.precision_recall_auc, step=epoch)
-                mlflow.log_metric("Hausdorf error", metrics.hausdorf_error, step=epoch)
-            
             self.save_weights()
             self.LOG(f"Last weights saved at epoch {epoch}")
 
             if metrics.dice > self.dsc_best:
-
-                if self.parameter_dict['mlflow']:
-                    mlflow.log_metric("CCR_best", metrics.CCR, step=epoch)
-                    mlflow.log_metric("Precision_best", metrics.precision, step=epoch)
-                    mlflow.log_metric("Recall - Sensitivity_best", metrics.recall, step=epoch)
-                    mlflow.log_metric("Specifity_best", metrics.specifity, step=epoch)
-                    mlflow.log_metric("F1 score_best", metrics.f1_score, step=epoch)
-                    mlflow.log_metric("Jaccard coef - IoU_best", metrics.jaccard, step=epoch)
-                    mlflow.log_metric("Dice score - DSC_best", metrics.dice, step=epoch)
-                    mlflow.log_metric("ROC AUC_best", metrics.roc_auc, step=epoch)
-                    mlflow.log_metric("Precision-recall AUC_best", metrics.precision_recall_auc, step=epoch)
-                    mlflow.log_metric("Hausdorf error_best", metrics.hausdorf_error, step=epoch)
 
                 self.LOG(f"New best value of DSC reach: {metrics.dice:.4f} (last: {self.dsc_best:.4f})")
                 self.dsc_best = metrics.dice
@@ -299,17 +285,20 @@ class UnetTrainer:
 
     def test(self):
 
-        self.load_weights()
+        #weights = self.parameter_dict['pretrained_weights_path']
+        #weights.replace('')
+        #self.load_weights()
         self.model.eval()
 
         print("[I] Evalutating the model...")
 
         metrics = get_evaluation_metrics(None, -1, self.dataset.testset_loader, self.model,
                                     self.parameter_dict["device"], None, COLOR=True,
-                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations")
+                                    SAVE_SEGS=True, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations", filename='avg_metrics_last.txt',
+                                    grayscale=self.parameter_dict["grayscale"])
 
         print("\n----------------------------------------------------------------------------")
-        print("EVALUTAION RESULTS ON TEST SET:")
+        print("EVALUTAION RESULTS ON TEST SET (LAST):")
         print("\tCCR: {:.4f}".format(metrics.CCR))
         print("\tPrecision: {:.4f}".format(metrics.precision))
         print("\tRecall: {:.4f}".format(metrics.recall))
@@ -323,6 +312,30 @@ class UnetTrainer:
         print("\tHausdorf error: {:.4f}".format(metrics.hausdorf_error))
         print("----------------------------------------------------------------------------")
         print(f"Segmentations saved at {self.experiment_folder}/segmentations")
+        
+        best_w = os.path.join(self.experiment_folder, "weights", 'best.pt')
+        print(best_w)
+        self.load_weights(best_w)
+        
+        metrics = get_evaluation_metrics(None, -1, self.dataset.testset_loader, self.model,
+                                    self.parameter_dict["device"], None, COLOR=True,
+                                    SAVE_SEGS=False, N_EPOCHS_SAVE=5, folder=f"{self.experiment_folder}/segmentations", filename='avg_metrics_best.txt')
+
+        print("\n----------------------------------------------------------------------------")
+        print("EVALUTAION RESULTS ON TEST SET (BEST):")
+        print("\tCCR: {:.4f}".format(metrics.CCR))
+        print("\tPrecision: {:.4f}".format(metrics.precision))
+        print("\tRecall: {:.4f}".format(metrics.recall))
+        print("\tSensibility: {:.4f}".format(metrics.sensibility))
+        print("\tSpecifity: {:.4f}".format(metrics.specifity))
+        print("\tF1 score: {:.4f}".format(metrics.f1_score))
+        print("\tJaccard coef: {:.4f}".format(metrics.jaccard))
+        print("\tDSC coef: {:.4f}".format(metrics.dice))
+        print("\tROC-AUC: {:.4f}".format(metrics.roc_auc))
+        print("\tPrecision-recall AUC: {:.4f}".format(metrics.precision_recall_auc))
+        print("\tHausdorf error: {:.4f}".format(metrics.hausdorf_error))
+        print("----------------------------------------------------------------------------")
+        #print(f"Segmentations saved at {self.experiment_folder}/segmentations")
 
     
     @staticmethod
@@ -386,12 +399,39 @@ class UnetTrainer:
                 save_image = generate_output_img(opencv_image, opencv_gt, opencv_segmentation)
                 cv2.imwrite(os.path.join('/workspace/shared_files/pruebas', f"{name}"), save_image)
 
+    def generate_augmented_examples(self):
+
+        self.model.eval()
+        from models.segmentors.dropblock_ import DropBlock2D
+
+        trans = transforms.ToPILImage()
+
+        for i, batched_sample in enumerate(self.dataset.trainset_loader):
+
+            images, masks = batched_sample["image"].to(self.parameter_dict["device"]),\
+                            batched_sample["mask"].to(self.parameter_dict["device"])
+
+            filenames = batched_sample["filename"]
+
+            drop_block = DropBlock2D(block_size=17, drop_prob=0.075)
+            images = drop_block(images)
+
+            
+            for j in range(images.shape[0]):
+                image, mask = images[j].detach().to('cpu'), masks[j].detach().to('cpu')
+
+                name = filenames[j].split('/')[-1]
+
+                image_save = trans(image.mul_(0.5).add_(0.5))
+
+                opencv_image = np.array(image_save)
+
+                cv2.imwrite(os.path.join('/home/imartinez/Code/aug/', f"{name}"), opencv_image)
+
+                
     def LOG(self, msg):
 
         file = os.path.join(self.experiment_folder, "log.txt")
-
-        if self.parameter_dict['mlflow']:
-            mlflow.log_artifacts(self.experiment_folder, artifact_path="log")
 
         if not os.path.isfile(file):
             with open(file, 'w') as f:
